@@ -62,8 +62,14 @@ export function getSupabaseConfig(): SupabaseConfig {
     console.error('Error reading Supabase config from storage:', err);
   }
 
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+  const envUrl = 
+    (import.meta as any).env?.VITE_SUPABASE_URL ||
+    (typeof process !== 'undefined' ? (process.env as any)?.VITE_SUPABASE_URL : '') ||
+    '';
+  const envKey = 
+    (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
+    (typeof process !== 'undefined' ? (process.env as any)?.VITE_SUPABASE_ANON_KEY : '') ||
+    '';
 
   return {
     url: cleanSupabaseUrl(envUrl),

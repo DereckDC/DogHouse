@@ -1,0 +1,6 @@
+{
+  "name": "DogHouse - Refugio de Animales",
+  "description": "Plataforma oficial del refugio de animales DogHouse: adopciones, apadrinamiento, donaciones, voluntariado, eventos comunitarios y reportes de perros perdidos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

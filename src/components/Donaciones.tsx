@@ -151,7 +151,7 @@ export const Donaciones: React.FC<DonacionesProps> = ({
       onShowToast(
         'success',
         '¡Comprobante Registrado!',
-        'El comprobante se guardó en Supabase Storage y ya es visible en el Panel de Administración.'
+        'El comprobante se guardó con éxito y ya es visible en el Panel de Administración.'
       );
     } catch (err) {
       console.error(err);
@@ -165,10 +165,6 @@ export const Donaciones: React.FC<DonacionesProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold uppercase tracking-wider">
-          <Gift className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Transparencia y Apoyo Directo</span>
-        </div>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900">
           Donaciones para DogHouse Refugio
         </h1>
@@ -600,7 +596,7 @@ export const Donaciones: React.FC<DonacionesProps> = ({
               <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <span className="text-xs text-stone-500 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Archivo encriptado y almacenado de forma segura en Supabase Storage.
+                  Archivo encriptado y almacenado de forma segura.
                 </span>
 
                 <button
@@ -609,7 +605,7 @@ export const Donaciones: React.FC<DonacionesProps> = ({
                   className="w-full sm:w-auto px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 >
                   {uploading ? (
-                    <span>Subiendo a Supabase...</span>
+                    <span>Subiendo comprobante...</span>
                   ) : (
                     <>
                       <Upload className="w-4 h-4" />

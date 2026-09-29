@@ -131,7 +131,7 @@ export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
       } catch (e) {}
 
       setSubmittedSuccess(true);
-      onShowToast('success', '¡Inscripción Guardada!', 'Tus datos se registraron en Supabase. Te redirigimos al WhatsApp directo de Ariel.');
+      onShowToast('success', '¡Inscripción Guardada!', 'Tus datos se registraron con éxito. Te redirigimos al WhatsApp directo de Ariel.');
 
       setTimeout(() => {
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -148,10 +148,6 @@ export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold uppercase tracking-wider">
-          <Users className="w-3.5 h-3.5 text-purple-600" />
-          <span>Fuerza Voluntaria DogHouse</span>
-        </div>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900">
           Únete a Nuestro Equipo de Voluntariado
         </h1>

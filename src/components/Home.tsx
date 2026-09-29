@@ -55,11 +55,6 @@ export const Home: React.FC<HomeProps> = ({
           
           {/* Hero Left Content */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-900 text-xs font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Refugio Oficial DogHouse Ecuador</span>
-            </div>
-
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 tracking-tight leading-[1.1]">
               Cada vida rescatada merece una <span className="text-amber-600 underline decoration-amber-300 decoration-wavy decoration-2">segunda oportunidad</span>.
             </h1>
@@ -207,11 +202,7 @@ export const Home: React.FC<HomeProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
           <div>
-            <div className="flex items-center gap-2 text-amber-600 text-xs font-extrabold uppercase tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              <span>Prioridad Alta</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-stone-900 mt-1">
+            <h2 className="text-2xl sm:text-3xl font-black text-stone-900">
               Esperan con ansias un hogar
             </h2>
             <p className="text-sm text-stone-600 mt-1">
@@ -238,7 +229,8 @@ export const Home: React.FC<HomeProps> = ({
             return (
               <div 
                 key={dog.id}
-                className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+                onClick={() => onNavigate('adopcion')}
+                className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
               >
                 <div className="relative h-60 overflow-hidden bg-stone-100">
                   <img
@@ -266,7 +258,7 @@ export const Home: React.FC<HomeProps> = ({
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold text-stone-900">{dog.nombre}</h3>
+                      <h3 className="text-xl font-bold text-stone-900 group-hover:text-amber-600 transition-colors">{dog.nombre}</h3>
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-600">
                         {dog.genero}
                       </span>
@@ -292,10 +284,14 @@ export const Home: React.FC<HomeProps> = ({
                       <div>Esterilizado: <span className="font-semibold text-emerald-600">{dog.esterilizado ? 'Sí' : 'No'}</span></div>
                     </div>
                     <button
-                      onClick={() => handleAdoptClick(dog)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('adopcion');
+                      }}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs"
                     >
-                      Postular Adopción
+                      Ver Galería
                     </button>
                   </div>
                 </div>
@@ -405,9 +401,6 @@ export const Home: React.FC<HomeProps> = ({
       {/* 3 Steps Adoption Process */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-            Proceso Simple y Transparente
-          </span>
           <h2 className="text-3xl font-black text-stone-900 mt-1">
             ¿Cómo adoptar en DogHouse?
           </h2>

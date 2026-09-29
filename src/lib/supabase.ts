@@ -932,6 +932,29 @@ export const LostDogsService = {
     };
   },
 
+  async update(id: string, cambios: Partial<PerroPerdidoReporte>): Promise<PerroPerdidoReporte> {
+    const payload: any = { ...cambios };
+    delete payload.id;
+    delete payload.created_at;
+
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('perros_perdidos')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        console.error('Supabase error updating lost dog:', error);
+        throw new Error(error.message);
+      }
+      return data;
+    }
+
+    return { id, ...cambios } as PerroPerdidoReporte;
+  },
+
   async updateStatus(id: string, nuevoEstado: 'Buscando' | 'Reunido con familia'): Promise<void> {
     if (isSupabaseConfigured()) {
       const { error } = await supabase

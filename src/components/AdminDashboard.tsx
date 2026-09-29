@@ -57,13 +57,7 @@ import {
   LostDogsService,
   SubmissionsService,
   AdminUserService,
-  SUPABASE_SQL_SCHEMA,
-  CREATE_ADMIN_SQL_SCRIPT,
-  ADMIN_TABLE_SQL_SCRIPT,
   isSupabaseConfigured,
-  getSupabaseConfig,
-  saveSupabaseConfig,
-  testSupabaseConnection,
 } from '../lib/supabase';
 import { buildWhatsAppPhoneOnlyUrl } from '../lib/whatsapp';
 
@@ -84,8 +78,7 @@ type AdminTab =
   | 'padrinos'
   | 'voluntarios'
   | 'comprobantes'
-  | 'admins'
-  | 'sql_config';
+  | 'admins';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onShowToast,
@@ -135,12 +128,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editingEvent, setEditingEvent] = useState<Partial<EventoRefugio> | null>(null);
   const [editingLostDog, setEditingLostDog] = useState<Partial<PerroPerdidoReporte> | null>(null);
   const [inspectingVoucher, setInspectingVoucher] = useState<ComprobanteDonacion | null>(null);
-
-  // Configuración Supabase
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => getSupabaseConfig().url);
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => getSupabaseConfig().anonKey);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<{ checked: boolean; success: boolean; message: string } | null>(null);
 
   // 1. Escucha y verificación de Sesión
   useEffect(() => {
@@ -379,98 +366,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onShowToast('info', 'Sesión Finalizada', 'Has cerrado tu sesión administrativa.');
   };
 
-  // Guardar configuración de Supabase
-  const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supabaseUrlInput.trim() || !supabaseKeyInput.trim()) {
-      onShowToast('error', 'Campos requeridos', 'Debes ingresar tanto la URL como la Anon Key de Supabase.');
-      return;
-    }
-    saveSupabaseConfig(supabaseUrlInput, supabaseKeyInput);
-    onShowToast('success', 'Configuración Guardada', 'Las credenciales de Supabase fueron actualizadas.');
-    handleTestConnection();
-    loadDashboardData();
-  };
-
-  // Test de conexión con Supabase
-  const handleTestConnection = async () => {
-    setTestingConnection(true);
-    setConnectionStatus(null);
-    try {
-      const res = await testSupabaseConnection();
-      setConnectionStatus({
-        checked: true,
-        success: res.success,
-        message: res.message,
-      });
-      if (res.success) {
-        onShowToast('success', 'Conexión Exitosa', res.message);
-      } else {
-        onShowToast('error', 'Fallo de Conexión', res.message);
-      }
-    } catch (err: any) {
-      setConnectionStatus({
-        checked: true,
-        success: false,
-        message: err.message || 'Error de conexión',
-      });
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  // Descarga del archivo SQL
-  const handleDownloadSQL = () => {
-    try {
-      const blob = new Blob([SUPABASE_SQL_SCHEMA], { type: 'text/sql;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'supabase_schema.sql';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      onShowToast('success', 'Archivo Descargado', 'supabase_schema.sql guardado en tus descargas.');
-    } catch (err) {
-      onShowToast('error', 'Error de descarga', 'No se pudo generar el archivo.');
-    }
-  };
-
-  const handleDownloadAdminSQL = () => {
-    try {
-      const blob = new Blob([CREATE_ADMIN_SQL_SCRIPT], { type: 'text/sql;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'create_admin.sql';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      onShowToast('success', 'Archivo Descargado', 'create_admin.sql guardado en tus descargas.');
-    } catch (err) {
-      onShowToast('error', 'Error de descarga', 'No se pudo generar el archivo.');
-    }
-  };
-
-  const handleDownloadAdminTableSQL = () => {
-    try {
-      const blob = new Blob([ADMIN_TABLE_SQL_SCRIPT], { type: 'text/sql;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'admin_table.sql';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      onShowToast('success', 'Archivo Descargado', 'admin_table.sql guardado en tus descargas.');
-    } catch (err) {
-      onShowToast('error', 'Error de descarga', 'No se pudo generar el archivo.');
-    }
-  };
-
   // Gestión de Fotos (Perro: hasta 5 fotos)
   const handleDogPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -609,7 +504,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       loadDashboardData();
       if (onDogListUpdated) onDogListUpdated();
     } catch (err: any) {
-      onShowToast('error', 'Error al guardar perro', err.message || 'No se pudo guardar en Supabase.');
+      onShowToast('error', 'Error al guardar perro', err.message || 'No se pudo guardar el registro.');
     }
   };
 
@@ -617,7 +512,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirm(`¿Eliminar definitivamente a ${nombre} del catálogo?`)) return;
     try {
       await DogService.delete(id);
-      onShowToast('info', 'Perro Eliminado', `${nombre} fue eliminado de Supabase.`);
+      onShowToast('info', 'Perro Eliminado', `${nombre} fue eliminado del catálogo.`);
       loadDashboardData();
       if (onDogListUpdated) onDogListUpdated();
     } catch (err: any) {
@@ -633,7 +528,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       if (editingNeed.id) {
         await NeedsService.update(editingNeed.id, editingNeed);
-        onShowToast('success', 'Insumo Actualizado', 'Se guardaron los cambios en Supabase.');
+        onShowToast('success', 'Insumo Actualizado', 'Se guardaron los cambios correctamente.');
       } else {
         await NeedsService.create({
           categoria: editingNeed.categoria as any,
@@ -658,10 +553,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirm('¿Eliminar este insumo de la lista de necesidades?')) return;
     try {
       await NeedsService.delete(id);
-      onShowToast('info', 'Insumo Eliminado', 'El ítem fue removido de Supabase.');
+      onShowToast('info', 'Insumo Eliminado', 'El ítem fue removido correctamente.');
       loadDashboardData();
     } catch (err: any) {
       onShowToast('error', 'Error al eliminar', err.message);
+    }
+  };
+
+  const handleQuickIncrementNeed = async (id: string, newQty: number) => {
+    if (newQty < 0) return;
+    try {
+      await NeedsService.update(id, { cantidad_actual: newQty });
+      onShowToast('success', 'Cantidad Actualizada', `Se actualizó la cantidad actual a ${newQty}.`);
+      loadDashboardData();
+    } catch (err: any) {
+      onShowToast('error', 'Error al actualizar', err.message || 'No se pudo actualizar.');
     }
   };
 
@@ -700,7 +606,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirm('¿Eliminar este evento de la cartelera?')) return;
     try {
       await EventsService.delete(id);
-      onShowToast('info', 'Evento Eliminado', 'El evento fue removido de Supabase.');
+      onShowToast('info', 'Evento Eliminado', 'El evento fue removido correctamente.');
       loadDashboardData();
     } catch (err: any) {
       onShowToast('error', 'Error al eliminar', err.message);
@@ -708,6 +614,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // CRUD PERROS PERDIDOS
+  const handleSaveLostDog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLostDog?.nombre_perro || !editingLostDog?.ubicacion_ultima_vez || !editingLostDog?.contacto_telefono) {
+      onShowToast('error', 'Campos Requeridos', 'Por favor completa el nombre del perro, ubicación y teléfono de contacto.');
+      return;
+    }
+
+    try {
+      if (editingLostDog.id) {
+        await LostDogsService.update(editingLostDog.id, {
+          nombre_perro: editingLostDog.nombre_perro,
+          fecha_perdido: editingLostDog.fecha_perdido || new Date().toISOString().split('T')[0],
+          foto_url: editingLostDog.foto_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
+          ubicacion_ultima_vez: editingLostDog.ubicacion_ultima_vez,
+          maps_url: editingLostDog.maps_url || undefined,
+          informacion_relevante: editingLostDog.informacion_relevante || '',
+          contacto_nombre: editingLostDog.contacto_nombre || 'Refugio DogHouse',
+          contacto_telefono: editingLostDog.contacto_telefono,
+          recompensa: editingLostDog.recompensa || undefined,
+          estado: editingLostDog.estado || 'Buscando',
+        });
+        onShowToast('success', 'Reporte Actualizado', `Información de ${editingLostDog.nombre_perro} actualizada correctamente.`);
+      } else {
+        await LostDogsService.create({
+          nombre_perro: editingLostDog.nombre_perro,
+          fecha_perdido: editingLostDog.fecha_perdido || new Date().toISOString().split('T')[0],
+          foto_url: editingLostDog.foto_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
+          ubicacion_ultima_vez: editingLostDog.ubicacion_ultima_vez,
+          maps_url: editingLostDog.maps_url || undefined,
+          informacion_relevante: editingLostDog.informacion_relevante || '',
+          contacto_nombre: editingLostDog.contacto_nombre || 'Refugio DogHouse',
+          contacto_telefono: editingLostDog.contacto_telefono,
+          recompensa: editingLostDog.recompensa || undefined,
+          estado: editingLostDog.estado || 'Buscando',
+        });
+        onShowToast('success', 'Reporte Creado', `Se publicó el reporte de ${editingLostDog.nombre_perro}.`);
+      }
+
+      setEditingLostDog(null);
+      loadDashboardData();
+    } catch (err: any) {
+      onShowToast('error', 'Error al guardar reporte', err.message || 'No se pudo guardar el reporte.');
+    }
+  };
+
   const handleToggleLostDogStatus = async (id: string, current: string) => {
     const nextStatus = current === 'Buscando' ? 'Reunido con familia' : 'Buscando';
     try {
@@ -839,7 +790,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Acceso restringido para el personal autorizado de Refugio DogHouse
             </p>
 
-            {/* Supabase Status Chip */}
+            {/* Status Chip */}
             <div className="pt-2 flex items-center justify-center">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
                 isSupabaseConfigured()
@@ -847,7 +798,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
               }`}>
                 <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured() ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                <span>{isSupabaseConfigured() ? 'Supabase Conectado' : 'Configuración Pendiente'}</span>
+                <span>{isSupabaseConfigured() ? 'Sistema Conectado' : 'Sistema en Línea'}</span>
               </span>
             </div>
           </div>
@@ -915,7 +866,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {authLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Verificando credenciales en Supabase...</span>
+                    <span>Verificando credenciales...</span>
                   </>
                 ) : (
                   <>
@@ -928,7 +879,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
               <span className="text-[11px] text-stone-400">
-                🔒 Gestión de administradores en Supabase
+                🔒 Gestión de administradores autorizados
               </span>
               {onNavigateToHome && (
                 <button
@@ -959,7 +910,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] uppercase font-extrabold tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Supabase Conectado</span>
+                <span>Sistema Conectado</span>
               </span>
               <span className="text-xs text-stone-400 font-mono">
                 {sessionUser.email || 'admin@refugiodoghouse.ec'}
@@ -973,25 +924,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* Acciones Rápidas del Top Bar */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={loadDashboardData}
-            disabled={loadingData}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold transition-colors disabled:opacity-50"
-            title="Sincronizar datos con Supabase"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin text-amber-400' : ''}`} />
-            <span>Sincronizar</span>
-          </button>
-
-          <button
-            onClick={handleDownloadSQL}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs font-bold transition-colors"
-            title="Descargar archivo supabase_schema.sql"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Descargar .SQL</span>
-          </button>
-
           <button
             onClick={handleLogout}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition-colors"
@@ -1149,22 +1081,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {adminsList.length}
             </span>
           </button>
-
-          {/* Separador */}
-          <div className="hidden md:block w-px bg-stone-200 my-1 mx-1" />
-
-          {/* GRUPO 3: CONFIGURACIÓN SQL */}
-          <button
-            onClick={() => { setActiveTab('sql_config'); setSearchQuery(''); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all ml-auto ${
-              activeTab === 'sql_config'
-                ? 'bg-stone-900 text-amber-400 shadow-xs'
-                : 'bg-stone-50 text-stone-700 hover:bg-stone-100 border border-stone-200'
-            }`}
-          >
-            <Database className="w-4 h-4 text-amber-500" />
-            <span>Supabase & SQL</span>
-          </button>
         </div>
       </div>
 
@@ -1287,8 +1203,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
             <div>
               <h3 className="text-lg font-black text-stone-900">Reportes de Perros Perdidos</h3>
-              <p className="text-xs text-stone-500">Reportes ciudadanos sincronizados en la tabla <code>perros_perdidos</code></p>
+              <p className="text-xs text-stone-500">Reportes ciudadanos y alertas de búsqueda del refugio</p>
             </div>
+            <button
+              onClick={() =>
+                setEditingLostDog({
+                  nombre_perro: '',
+                  fecha_perdido: new Date().toISOString().split('T')[0],
+                  foto_url: '',
+                  ubicacion_ultima_vez: '',
+                  maps_url: '',
+                  informacion_relevante: '',
+                  contacto_nombre: 'Refugio DogHouse',
+                  contacto_telefono: '',
+                  recompensa: '',
+                  estado: 'Buscando',
+                })
+              }
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Añadir Reporte</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1321,6 +1257,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <Phone className="w-3.5 h-3.5 text-stone-400" />
                         <span>{reporte.contacto_nombre}: {reporte.contacto_telefono}</span>
                       </div>
+                      <div className="flex items-center gap-1.5 text-stone-400 text-[11px]">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Fecha: {reporte.fecha_perdido}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1333,6 +1273,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     Cambiar Estado
                   </button>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setEditingLostDog(reporte)}
+                      className="p-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1 transition-colors"
+                      title="Editar información del reporte"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
                     {reporte.maps_url && (
                       <a
                         href={reporte.maps_url}
@@ -1347,6 +1295,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button
                       onClick={() => handleDeleteLostDog(reporte.id, reporte.nombre_perro)}
                       className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
+                      title="Eliminar reporte"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1407,7 +1356,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </td>
                       <td className="p-4">{n.categoria}</td>
                       <td className="p-4 font-semibold">
-                        {n.cantidad_actual} / {n.cantidad_meta} {n.unidad}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span className="font-bold text-stone-900">
+                            {n.cantidad_actual} / {n.cantidad_meta} {n.unidad}
+                          </span>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleQuickIncrementNeed(n.id, n.cantidad_actual - 1)}
+                              disabled={n.cantidad_actual <= 0}
+                              className="px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs disabled:opacity-40 transition-colors"
+                              title="Restar 1"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickIncrementNeed(n.id, n.cantidad_actual + 1)}
+                              className="px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs transition-colors"
+                              title="Sumar 1"
+                            >
+                              +1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickIncrementNeed(n.id, n.cantidad_actual + 5)}
+                              className="px-2 py-0.5 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-xs transition-colors"
+                              title="Sumar 5"
+                            >
+                              +5
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1439,7 +1419,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* PESTAÑA: EVENTOS */}
+      {/* PESTAÑA: EVENTOS (DIVIDIDA EN ACTUALES Y PRÓXIMOS CON DIMENSIONES ESTABLES) */}
       {activeTab === 'eventos' && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
@@ -1451,7 +1431,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onClick={() =>
                 setEditingEvent({
                   titulo: '',
-                  tipo: 'Próximamente',
+                  tipo: 'Evento Actual',
                   fecha: 'Sábado 15 de Noviembre, 2026',
                   hora: '10:00 AM - 02:00 PM',
                   lugar: 'Salinas, Santa Elena',
@@ -1468,43 +1448,114 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {events.map((ev) => (
-              <div key={ev.id} className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="relative h-40 bg-stone-100">
-                    <img src={ev.foto_url} alt={ev.titulo} className="w-full h-full object-cover" />
-                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-xs font-bold bg-stone-900/90 text-white">
-                      {ev.tipo}
-                    </span>
-                  </div>
-                  <div className="p-4 space-y-1.5">
-                    <span className="text-xs font-bold text-amber-700">{ev.fecha}</span>
-                    <h4 className="font-bold text-stone-900">{ev.titulo}</h4>
-                    <p className="text-xs text-stone-500 line-clamp-2">{ev.descripcion_corta}</p>
-                    <div className="text-[11px] text-stone-400 flex items-center gap-1 pt-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{ev.lugar}</span>
+          {/* 1. EVENTOS ACTUALES EN ADMIN */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h4 className="text-sm font-extrabold uppercase tracking-wider text-stone-800">
+                Eventos Actuales ({events.filter((e) => e.tipo === 'Evento Actual').length})
+              </h4>
+            </div>
+
+            {events.filter((e) => e.tipo === 'Evento Actual').length === 0 ? (
+              <div className="bg-white p-6 rounded-2xl border border-stone-200 text-center text-xs text-stone-500">
+                No hay eventos marcados como evento actual.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {events.filter((e) => e.tipo === 'Evento Actual').map((ev) => (
+                  <div key={ev.id} className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs flex flex-col justify-between h-[380px]">
+                    <div>
+                      <div className="relative h-44 w-full bg-stone-100 flex-shrink-0 overflow-hidden">
+                        <img src={ev.foto_url} alt={ev.titulo} className="w-full h-full object-cover" />
+                        <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-xs">
+                          Evento Actual
+                        </span>
+                      </div>
+                      <div className="p-4 space-y-1.5">
+                        <span className="text-xs font-bold text-amber-700">{ev.fecha}</span>
+                        <h4 className="font-bold text-stone-900 line-clamp-1">{ev.titulo}</h4>
+                        <p className="text-xs text-stone-500 line-clamp-2">{ev.descripcion_corta}</p>
+                        <div className="text-[11px] text-stone-400 flex items-center gap-1 pt-1">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{ev.lugar}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0 flex justify-end gap-2 border-t border-stone-100 mt-auto">
+                      <button
+                        onClick={() => setEditingEvent(ev)}
+                        className="p-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(ev.id)}
+                        className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold"
+                      >
+                        Eliminar
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                <div className="p-4 pt-0 flex justify-end gap-2 border-t border-stone-100 mt-2">
-                  <button
-                    onClick={() => setEditingEvent(ev)}
-                    className="p-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEvent(ev.id)}
-                    className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold"
-                  >
-                    Eliminar
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* 2. PRÓXIMOS EVENTOS EN ADMIN */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+              <h4 className="text-sm font-extrabold uppercase tracking-wider text-stone-800">
+                Próximos Eventos ({events.filter((e) => e.tipo === 'Próximamente').length})
+              </h4>
+            </div>
+
+            {events.filter((e) => e.tipo === 'Próximamente').length === 0 ? (
+              <div className="bg-white p-6 rounded-2xl border border-stone-200 text-center text-xs text-stone-500">
+                No hay eventos futuros programados.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {events.filter((e) => e.tipo === 'Próximamente').map((ev) => (
+                  <div key={ev.id} className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs flex flex-col justify-between h-[380px]">
+                    <div>
+                      <div className="relative h-44 w-full bg-stone-100 flex-shrink-0 overflow-hidden">
+                        <img src={ev.foto_url} alt={ev.titulo} className="w-full h-full object-cover" />
+                        <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-900/90 text-white shadow-xs">
+                          Próximamente
+                        </span>
+                      </div>
+                      <div className="p-4 space-y-1.5">
+                        <span className="text-xs font-bold text-amber-700">{ev.fecha}</span>
+                        <h4 className="font-bold text-stone-900 line-clamp-1">{ev.titulo}</h4>
+                        <p className="text-xs text-stone-500 line-clamp-2">{ev.descripcion_corta}</p>
+                        <div className="text-[11px] text-stone-400 flex items-center gap-1 pt-1">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{ev.lugar}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0 flex justify-end gap-2 border-t border-stone-100 mt-auto">
+                      <button
+                        onClick={() => setEditingEvent(ev)}
+                        className="p-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(ev.id)}
+                        className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1858,7 +1909,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   Gestión de Administradores del Refugio
                 </h3>
                 <p className="text-xs text-stone-500 mt-1 max-w-2xl leading-relaxed">
-                  Esta tabla almacena en PostgreSQL las credenciales institucionales de acceso: correo, contraseña encriptada con algoritmo Bcrypt (<code className="bg-stone-100 px-1 py-0.5 rounded text-amber-700 font-mono">crypt(p_password, gen_salt(&apos;bf&apos;))</code>), rol administrativo, cargo institucional, teléfono y fecha de último acceso.
+                  Administra las cuentas de usuario y personal autorizado para la gestión del refugio DogHouse en Supabase.
                 </p>
               </div>
 
@@ -1877,32 +1928,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <UserPlus className="w-4 h-4" />
                   <span>Nuevo Administrador</span>
                 </button>
-
-                <button
-                  onClick={handleDownloadAdminTableSQL}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-amber-300 text-xs font-bold transition-colors"
-                  title="Descargar admin_table.sql para Supabase"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar admin_table.sql</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(ADMIN_TABLE_SQL_SCRIPT);
-                    onShowToast('success', 'SQL Copiado', 'Script de la tabla public.admins copiado al portapapeles.');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition-colors"
-                  title="Copiar DDL de public.admins"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copiar SQL</span>
-                </button>
               </div>
             </div>
 
             {/* Tarjetas de Resumen */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 text-xs">
                 <span className="text-stone-500 block text-[11px]">Total Administradores</span>
                 <span className="text-xl font-black text-stone-900 font-mono mt-0.5 block">
@@ -1925,15 +1955,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {adminsList.filter((a) => a.rol === 'Superadmin').length}
                 </span>
                 <span className="text-[10px] text-amber-700 mt-1 block">Acceso total al sistema</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-stone-900 text-white text-xs">
-                <span className="text-stone-300 block text-[11px] font-semibold">Seguridad Password</span>
-                <span className="text-sm font-bold text-amber-400 font-mono mt-1 block flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Bcrypt / pgcrypto</span>
-                </span>
-                <span className="text-[10px] text-stone-400 mt-1 block">Protección en base de datos</span>
               </div>
             </div>
           </div>
@@ -2108,18 +2129,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => {
-                                const sqlSnippet = `SELECT public.guardar_admin(\n  '${admin.email}',\n  'NUEVA_CLAVE_AQUI',\n  '${admin.nombre}',\n  '${admin.rol}',\n  '${admin.telefono || ''}',\n  '${admin.cargo || 'Administrador de Refugio'}'\n);`;
-                                navigator.clipboard.writeText(sqlSnippet);
-                                onShowToast('info', 'SQL Copiado', `Sentencia para cambiar la contraseña de ${admin.nombre} copiada.`);
-                              }}
-                              className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700"
-                              title="Copiar SQL para actualizar contraseña"
-                            >
-                              <Key className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
                               onClick={() => handleDeleteAdmin(admin.id, admin.nombre)}
                               className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
                               title="Eliminar administrador de Supabase"
@@ -2137,7 +2146,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <ShieldCheck className="w-8 h-8 text-stone-300 mx-auto mb-2" />
                         <p className="font-bold text-stone-700">No hay administradores registrados aún en la tabla public.admins</p>
                         <p className="text-stone-500 text-[11px] mt-1">
-                          Ejecuta el script SQL en Supabase para registrar el primer administrador o pulsa en &quot;Nuevo Administrador&quot;.
+                          Pulsa en &quot;Nuevo Administrador&quot; para registrar el primer administrador.
                         </p>
                       </td>
                     </tr>
@@ -2145,303 +2154,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Tarjeta Informativa sobre la Estructura de la Base de Datos */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
-              <div>
-                <h4 className="text-base font-black text-stone-900 flex items-center gap-2">
-                  <Database className="w-4 h-4 text-amber-600" />
-                  <span>Estructura de la Tabla public.admins en Supabase</span>
-                </h4>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Columnas, tipos de datos y restricciones configuradas en PostgreSQL para garantizar la máxima seguridad:
-                </p>
-              </div>
-
-              <button
-                onClick={handleDownloadAdminTableSQL}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Descargar DDL .sql</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-mono">
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">id</strong>
-                <span className="text-stone-500 text-[11px]">UUID PRIMARY KEY DEFAULT gen_random_uuid()</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-amber-800 font-bold block">email</strong>
-                <span className="text-stone-500 text-[11px]">TEXT UNIQUE NOT NULL (Correo login)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-amber-800 font-bold block">password_hash</strong>
-                <span className="text-stone-500 text-[11px]">TEXT NOT NULL (Bcrypt / blowfish)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">nombre</strong>
-                <span className="text-stone-500 text-[11px]">TEXT NOT NULL (Nombre completo)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">rol</strong>
-                <span className="text-stone-500 text-[11px]">CHECK (rol IN (&apos;Superadmin&apos;, ...))</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">cargo</strong>
-                <span className="text-stone-500 text-[11px]">TEXT (Puesto en el refugio)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">telefono</strong>
-                <span className="text-stone-500 text-[11px]">TEXT (WhatsApp / Contacto)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">activo</strong>
-                <span className="text-stone-500 text-[11px]">BOOLEAN NOT NULL DEFAULT true</span>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200">
-                <strong className="text-stone-900 font-bold block">ultimo_acceso</strong>
-                <span className="text-stone-500 text-[11px]">TIMESTAMPTZ (Actualizado en cada login)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PESTAÑA: SUPABASE & SQL CONFIG (FUENTE ÚNICA DE DATOS) */}
-      {activeTab === 'sql_config' && (
-        <div className="space-y-6">
-          {/* Card de Conexión */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 space-y-6 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5">
-              <div>
-                <h3 className="text-xl font-black text-stone-900 flex items-center gap-2">
-                  <Database className="w-5 h-5 text-amber-600" />
-                  <span>Configuración de Conexión a Supabase</span>
-                </h3>
-                <p className="text-xs text-stone-500 mt-1">
-                  Supabase con PostgreSQL como fuente única de base de datos para DogHouse.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={testingConnection}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin' : ''}`} />
-                  <span>Probar Conexión</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Resultado de prueba de conexión */}
-            {connectionStatus && (
-              <div className={`p-4 rounded-2xl border text-xs font-medium flex items-start gap-3 ${
-                connectionStatus.success
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                  : 'bg-rose-50 border-rose-200 text-rose-900'
-              }`}>
-                {connectionStatus.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                )}
-                <div>
-                  <div className="font-bold">{connectionStatus.success ? 'Conexión Exitosa' : 'Aviso de Conexión'}</div>
-                  <div className="mt-0.5 leading-relaxed">{connectionStatus.message}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Formulario de Parámetros */}
-            <form onSubmit={handleSaveSupabaseConfig} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  VITE_SUPABASE_URL (Project URL)
-                </label>
-                <input
-                  type="text"
-                  value={supabaseUrlInput}
-                  onChange={(e) => setSupabaseUrlInput(e.target.value)}
-                  placeholder="https://tu-proyecto.supabase.co"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  VITE_SUPABASE_ANON_KEY (Public Key)
-                </label>
-                <input
-                  type="password"
-                  value={supabaseKeyInput}
-                  onChange={(e) => setSupabaseKeyInput(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5c..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-xs font-mono focus:ring-2 focus:ring-amber-500 outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-2 flex items-center justify-between pt-2">
-                <span className="text-[11px] text-stone-500">
-                  También puedes definir estas variables en tu archivo <code>.env</code> o secrets.
-                </span>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs"
-                >
-                  Guardar y Reconectar
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Card del Editor SQL & Copia */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-stone-900">
-                  Archivo SQL Completo para el Editor de Supabase
-                </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Copia y pega este script en el <strong>SQL Editor</strong> de Supabase para crear todas las tablas, buckets y políticas RLS.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-                    onShowToast('success', 'SQL Copiado', 'Esquema completo copiado al portapapeles.');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copiar SQL</span>
-                </button>
-                <button
-                  onClick={handleDownloadSQL}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar .sql</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Pasos en Supabase */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 py-2">
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                <div className="font-bold text-amber-700 mb-1">1. Abrir Supabase</div>
-                <p className="text-stone-500 text-[11px]">Ingresa a supabase.com y abre tu proyecto.</p>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                <div className="font-bold text-amber-700 mb-1">2. Ir a SQL Editor</div>
-                <p className="text-stone-500 text-[11px]">En el menú lateral izquierdo, haz clic en SQL Editor.</p>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                <div className="font-bold text-amber-700 mb-1">3. Pegar el Script</div>
-                <p className="text-stone-500 text-[11px]">Crea una New Query y pega el contenido copiado.</p>
-              </div>
-              <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                <div className="font-bold text-amber-700 mb-1">4. Presionar RUN</div>
-                <p className="text-stone-500 text-[11px]">Ejecuta el script. Todas las tablas quedarán creadas.</p>
-              </div>
-            </div>
-
-            <pre className="bg-stone-950 text-stone-200 p-5 rounded-2xl text-xs font-mono overflow-x-auto max-h-[500px] border border-stone-800 leading-relaxed">
-              {SUPABASE_SQL_SCHEMA}
-            </pre>
-          </div>
-
-          {/* Card del Script de Creación de Admin */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-stone-900 flex items-center gap-2">
-                  <Key className="w-5 h-5 text-amber-600" />
-                  <span>Script SQL: Registrar Usuario Administrador</span>
-                </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Ejecuta este script en Supabase SQL Editor para crear tu usuario administrador en <code>auth.users</code> con correo pre-confirmado.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(CREATE_ADMIN_SQL_SCRIPT);
-                    onShowToast('success', 'Script de Admin Copiado', 'Copiado al portapapeles. Pégalo en SQL Editor de Supabase.');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copiar Script Admin</span>
-                </button>
-                <button
-                  onClick={handleDownloadAdminSQL}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar create_admin.sql</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
-              <span className="font-bold block">💡 Nota sobre el script:</span>
-              <p className="text-[11px] text-stone-700 leading-relaxed">
-                Este script utiliza la extensión <code>pgcrypto</code> para encriptar la contraseña con Bcrypt y marca <code>email_confirmed_at = now()</code>. Esto permite que el login funcione al instante en Supabase Auth sin necesidad de configurar servidores SMTP de envío de correos.
-              </p>
-            </div>
-
-            <pre className="bg-stone-950 text-amber-300 p-5 rounded-2xl text-xs font-mono overflow-x-auto max-h-[380px] border border-stone-800 leading-relaxed">
-              {CREATE_ADMIN_SQL_SCRIPT}
-            </pre>
-          </div>
-
-          {/* Card del Script de la Tabla public.admins */}
-          <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 space-y-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-stone-900 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-amber-600" />
-                  <span>Script SQL: Tabla de Administradores (public.admins)</span>
-                </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Crea la tabla <code>public.admins</code> con correo, contraseña encriptada (bcrypt), rol, cargo, teléfono y funciones de login seguro.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(ADMIN_TABLE_SQL_SCRIPT);
-                    onShowToast('success', 'Script Tabla Copiado', 'DDL de public.admins copiado al portapapeles.');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copiar SQL Tabla Admins</span>
-                </button>
-                <button
-                  onClick={handleDownloadAdminTableSQL}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar admin_table.sql</span>
-                </button>
-              </div>
-            </div>
-
-            <pre className="bg-stone-950 text-emerald-300 p-5 rounded-2xl text-xs font-mono overflow-x-auto max-h-[380px] border border-stone-800 leading-relaxed">
-              {ADMIN_TABLE_SQL_SCRIPT}
-            </pre>
           </div>
         </div>
       )}
@@ -2663,9 +2375,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-sm"
                 >
-                  Guardar Perro en Supabase
+                  Guardar Perro
                 </button>
               </div>
             </form>
@@ -2770,7 +2482,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
                 >
-                  Guardar en Supabase
+                  Guardar Insumo
                 </button>
               </div>
             </form>
@@ -2875,7 +2587,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
                 >
-                  Guardar Evento en Supabase
+                  Guardar Evento
                 </button>
               </div>
             </form>
@@ -2987,7 +2699,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div>
                   <h3 className="font-black text-lg text-stone-900">Registrar Administrador</h3>
                   <p className="text-xs text-stone-500">
-                    Almacena las credenciales en la tabla <code>public.admins</code> de Supabase
+                    Almacena las credenciales en la base de datos de administración
                   </p>
                 </div>
               </div>
@@ -3074,68 +2786,217 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              {/* Sentencia SQL Generada en tiempo real */}
-              <div className="p-3 rounded-2xl bg-stone-900 text-stone-200 space-y-1.5 border border-stone-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-amber-400 font-mono tracking-wider">
-                    Sentencia SQL para Supabase SQL Editor:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sql = `SELECT public.guardar_admin(\n  '${newAdminForm.email || 'correo@ejemplo.com'}',\n  '${newAdminForm.password || 'password123'}',\n  '${newAdminForm.nombre || 'Nombre Admin'}',\n  '${newAdminForm.rol}',\n  '${newAdminForm.telefono || ''}',\n  '${newAdminForm.cargo || 'Administrador de Refugio'}'\n);`;
-                      navigator.clipboard.writeText(sql);
-                      onShowToast('success', 'SQL Copiado', 'Sentencia SQL copiada para ejecutar en Supabase.');
-                    }}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:text-white bg-stone-800 px-2 py-0.5 rounded-lg transition-colors"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copiar SQL</span>
-                  </button>
-                </div>
-                <pre className="text-[11px] font-mono text-stone-300 overflow-x-auto whitespace-pre-wrap leading-tight">
-                  {`SELECT public.guardar_admin(
-  '${newAdminForm.email || 'correo@ejemplo.com'}',
-  '${newAdminForm.password ? '••••••••' : 'password_aqui'}',
-  '${newAdminForm.nombre || 'Nombre Admin'}',
-  '${newAdminForm.rol}',
-  '${newAdminForm.telefono || '0997948588'}',
-  '${newAdminForm.cargo || 'Administrador de Refugio'}'
-);`}
-                </pre>
-              </div>
-
-              <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-stone-100">
+              <div className="pt-3 flex items-center justify-between gap-2.5 border-t border-stone-100">
                 <button
                   type="button"
                   onClick={() => setNewAdminForm(null)}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-stone-200 font-bold text-stone-600 hover:bg-stone-50"
+                  className="px-4 py-2.5 rounded-xl border border-stone-200 font-bold text-stone-600 hover:bg-stone-50"
                 >
                   Cancelar
                 </button>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sql = `SELECT public.guardar_admin(\n  '${newAdminForm.email || 'correo@ejemplo.com'}',\n  '${newAdminForm.password || 'password123'}',\n  '${newAdminForm.nombre || 'Nombre Admin'}',\n  '${newAdminForm.rol}',\n  '${newAdminForm.telefono || ''}',\n  '${newAdminForm.cargo || 'Administrador de Refugio'}'\n);`;
-                      navigator.clipboard.writeText(sql);
-                      onShowToast('success', 'SQL Copiado', 'Pégalo en el SQL Editor de Supabase y pulsa Run.');
-                    }}
-                    className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copiar SQL</span>
-                  </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Guardar Administrador</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-                  <button
-                    type="submit"
-                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Guardar en Supabase</span>
-                  </button>
+      {/* MODAL EDITAR / CREAR REPORTE DE PERRO PERDIDO */}
+      {editingLostDog && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-black text-lg text-stone-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <span>{editingLostDog.id ? 'Editar Reporte de Perro Perdido' : 'Nuevo Reporte de Perro Perdido'}</span>
+              </h3>
+              <button onClick={() => setEditingLostDog(null)} className="p-1 rounded-lg hover:bg-stone-100">
+                <X className="w-5 h-5 text-stone-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLostDog} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Nombre del Perro</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLostDog.nombre_perro || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, nombre_perro: e.target.value })}
+                    placeholder="Ej. Rocky"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
                 </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Fecha de Desaparición</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingLostDog.fecha_perdido || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, fecha_perdido: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-stone-700 block mb-1">Foto del Perro (URL o Subir Archivo)</label>
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    value={editingLostDog.foto_url || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, foto_url: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <label className="flex items-center justify-center gap-2 p-2 rounded-xl border border-dashed border-stone-300 hover:bg-stone-50 text-stone-600 cursor-pointer transition-colors text-xs font-semibold">
+                    <Camera className="w-4 h-4 text-stone-500" />
+                    <span>Subir foto desde dispositivo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            if (result) {
+                              setEditingLostDog((prev) => prev ? { ...prev, foto_url: result } : null);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {editingLostDog.foto_url && (
+                  <div className="mt-2 relative h-36 rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
+                    <img src={editingLostDog.foto_url} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              {/* Ubicación Exacta con Maps y Sector de Referencia */}
+              <div className="space-y-3">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">
+                    Enlace de Google Maps (Ubicación exacta de pérdida)
+                  </label>
+                  <input
+                    type="url"
+                    value={editingLostDog.maps_url || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, maps_url: e.target.value })}
+                    placeholder="https://maps.app.goo.gl/... o https://maps.google.com/..."
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    📍 Este enlace de Google Maps determinará la ubicación exacta del mapa donde se extravió el perrito.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">
+                    Sector / Zona (Solo para referencia descriptiva)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLostDog.ubicacion_ultima_vez || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, ubicacion_ultima_vez: e.target.value })}
+                    placeholder="Ej. Sector Chipipe, cerca del malecón, Salinas (Referencia)"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-stone-400 mt-1">
+                    Texto de referencia rápida visible en la tarjeta.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-stone-700 block mb-1">Información Relevante / Características / Raza</label>
+                <textarea
+                  rows={2}
+                  value={editingLostDog.informacion_relevante || ''}
+                  onChange={(e) => setEditingLostDog({ ...editingLostDog, informacion_relevante: e.target.value })}
+                  placeholder="Ej. Collar rojo con placa, pelaje marrón claro, responde al nombre de Rocky..."
+                  className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Nombre de Contacto</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingLostDog.contacto_nombre || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, contacto_nombre: e.target.value })}
+                    placeholder="Ej. Familia Rodríguez"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Teléfono / WhatsApp de Contacto</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editingLostDog.contacto_telefono || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, contacto_telefono: e.target.value })}
+                    placeholder="Ej. 0991234567"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Recompensa (Opcional)</label>
+                  <input
+                    type="text"
+                    value={editingLostDog.recompensa || ''}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, recompensa: e.target.value })}
+                    placeholder="Ej. $100 USD o Se ofrece recompensa"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">Estado de Búsqueda</label>
+                  <select
+                    value={editingLostDog.estado || 'Buscando'}
+                    onChange={(e) => setEditingLostDog({ ...editingLostDog, estado: e.target.value as any })}
+                    className="w-full p-2.5 rounded-xl border border-stone-300 outline-none bg-white font-medium"
+                  >
+                    <option value="Buscando">Buscando (Alerta Activa)</option>
+                    <option value="Reunido con familia">Reunido con familia (Resuelto)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingLostDog(null)}
+                  className="px-4 py-2.5 rounded-xl border border-stone-200 font-bold text-stone-600 hover:bg-stone-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                >
+                  Guardar Reporte
+                </button>
               </div>
             </form>
           </div>

@@ -248,10 +248,6 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-100/30 p-6 sm:p-8 rounded-3xl border border-amber-200/60 relative overflow-hidden">
         <div className="max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>Catálogo Oficial de Huellas DogHouse</span>
-          </div>
           <h1 className="text-3xl sm:text-4xl font-black text-stone-900">
             Adopta un compañero para toda la vida
           </h1>
@@ -549,7 +545,10 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
               key={dog.id}
               id={`dog-card-${dog.id}`}
               className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
-              onClick={() => handleAdoptAction(dog)}
+              onClick={() => {
+                setPreviewDogIndex(index);
+                setActiveDogPhotoIndex(0);
+              }}
             >
               {/* Card Photo & Badges */}
               <div className="relative h-64 overflow-hidden bg-stone-100">
@@ -566,6 +565,7 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     setPreviewDogIndex(index);
+                    setActiveDogPhotoIndex(0);
                   }}
                   className="absolute top-3 right-3 p-2 rounded-xl bg-stone-900/70 hover:bg-stone-900 text-white backdrop-blur-xs transition-colors shadow-sm"
                   title="Ver foto en tamaño completo"
@@ -671,29 +671,18 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
                 </div>
 
                 {/* CTA Buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="pt-1">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setPreviewDogIndex(index);
+                      setActiveDogPhotoIndex(0);
                     }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-stone-700 bg-stone-100 hover:bg-stone-200 transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.99] transition-all shadow-xs"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Ver Galería</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAdoptAction(dog);
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs"
-                  >
-                    <Dog className="w-3.5 h-3.5" />
-                    <span>Adoptar</span>
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Ver Galería y Conocer a {dog.nombre}</span>
                   </button>
                 </div>
               </div>
@@ -706,7 +695,10 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
           {filteredDogs.map((dog, index) => (
             <div
               key={dog.id}
-              onClick={() => setPreviewDogIndex(index)}
+              onClick={() => {
+                setPreviewDogIndex(index);
+                setActiveDogPhotoIndex(0);
+              }}
               className="group relative bg-stone-900 rounded-2xl overflow-hidden aspect-4/5 cursor-pointer shadow-sm hover:shadow-lg transition-all"
             >
               <img
@@ -745,16 +737,17 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
                 </div>
                 <p className="text-[11px] text-stone-300 line-clamp-1">{dog.descripcion}</p>
                 <div className="pt-1 flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-stone-400">Clic para ampliar</span>
+                  <span className="text-[10px] text-stone-400">Clic para ver galería</span>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleAdoptAction(dog);
+                      setPreviewDogIndex(index);
+                      setActiveDogPhotoIndex(0);
                     }}
                     className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-[10px] transition-colors"
                   >
-                    Adoptar
+                    Ver Galería
                   </button>
                 </div>
               </div>

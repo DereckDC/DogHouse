@@ -439,7 +439,7 @@ export const FormularioAdopcion: React.FC<FormularioAdopcionProps> = ({
               <div className="pt-2 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-[11px] text-stone-500 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  Al enviar, se guardará en Supabase y se abrirá WhatsApp con el mensaje prellenado.
+                  Al enviar, se guardará tu registro y se abrirá WhatsApp con el mensaje prellenado.
                 </p>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -460,7 +460,7 @@ export const FormularioAdopcion: React.FC<FormularioAdopcionProps> = ({
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Enviar Solicitud</span>
+                        <span>Enviar</span>
                       </>
                     )}
                   </button>

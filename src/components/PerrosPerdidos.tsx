@@ -82,14 +82,7 @@ export const PerrosPerdidos: React.FC<PerrosPerdidosProps> = ({
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setReportForm((prev) => {
-      const updated = { ...prev, [name]: value };
-      // Generar automáticamente enlace simulado a Google Maps si se escribe la ubicación
-      if (name === 'ubicacion_ultima_vez') {
-        updated.maps_url = `https://maps.google.com/?q=${encodeURIComponent(value + ' Ecuador')}`;
-      }
-      return updated;
-    });
+    setReportForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmitReport = async (e: React.FormEvent) => {
@@ -103,16 +96,12 @@ export const PerrosPerdidos: React.FC<PerrosPerdidosProps> = ({
     setLoading(true);
 
     try {
-      /**
-       * Supabase inserción:
-       * await supabase.from('perros_perdidos').insert([reportForm]);
-       */
       await LostDogsService.create({
         nombre_perro: reportForm.nombre_perro,
         fecha_perdido: reportForm.fecha_perdido,
         foto_url: reportForm.foto_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
         ubicacion_ultima_vez: reportForm.ubicacion_ultima_vez,
-        maps_url: reportForm.maps_url || `https://maps.google.com/?q=${encodeURIComponent(reportForm.ubicacion_ultima_vez)}`,
+        maps_url: reportForm.maps_url || (reportForm.ubicacion_ultima_vez ? `https://maps.google.com/?q=${encodeURIComponent(reportForm.ubicacion_ultima_vez + ' Ecuador')}` : undefined),
         informacion_relevante: reportForm.informacion_relevante,
         contacto_nombre: reportForm.contacto_nombre,
         contacto_telefono: reportForm.contacto_telefono,
@@ -147,10 +136,6 @@ export const PerrosPerdidos: React.FC<PerrosPerdidosProps> = ({
       {/* Header */}
       <div className="bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-orange-500/10 p-6 sm:p-8 rounded-3xl border border-rose-200/60 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-900 text-xs font-bold uppercase tracking-wider">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-            <span>Red Comunitaria de Búsqueda</span>
-          </div>
           <h1 className="text-3xl sm:text-4xl font-black text-stone-900">
             Perros Perdidos y Encontrados
           </h1>
@@ -432,20 +417,42 @@ export const PerrosPerdidos: React.FC<PerrosPerdidosProps> = ({
                 )}
               </div>
 
-              {/* Ubicación e Información relevante */}
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Ubicación de última vez (Sector, calles de referencia) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="ubicacion_ultima_vez"
-                  value={reportForm.ubicacion_ultima_vez}
-                  onChange={handleFormChange}
-                  placeholder="Ej. Parque La Carolina, cerca a la pista de patinaje, Quito"
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl border border-stone-300 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                />
+              {/* Ubicación Exacta con Maps y Sector de Referencia */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    Enlace de Google Maps (Ubicación exacta de pérdida)
+                  </label>
+                  <input
+                    type="url"
+                    name="maps_url"
+                    value={reportForm.maps_url}
+                    onChange={handleFormChange}
+                    placeholder="https://maps.app.goo.gl/... o https://maps.google.com/..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-stone-300 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                  <p className="text-[11px] text-stone-500 mt-1">
+                    📍 Este enlace de Google Maps determinará la ubicación exacta del mapa donde se extravió el perrito.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    Sector / Zona (Solo para referencia descriptiva) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="ubicacion_ultima_vez"
+                    value={reportForm.ubicacion_ultima_vez}
+                    onChange={handleFormChange}
+                    placeholder="Ej. Sector Chipipe, cerca del malecón, Salinas (Referencia)"
+                    required
+                    className="w-full px-3.5 py-2 rounded-xl border border-stone-300 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                  <p className="text-[11px] text-stone-400 mt-1">
+                    Texto de referencia rápida visible en la tarjeta.
+                  </p>
+                </div>
               </div>
 
               <div>

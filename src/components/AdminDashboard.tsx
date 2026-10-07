@@ -38,6 +38,8 @@ import {
   MapPin,
   CheckSquare,
   UserCheck,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
 import {
   Perro,
@@ -47,6 +49,8 @@ import {
   PerroPerdidoReporte,
   DogSize,
   AdminUser,
+  HistoriaMes,
+  ContactoVoluntariado,
 } from '../types';
 import {
   supabase,
@@ -57,6 +61,10 @@ import {
   LostDogsService,
   SubmissionsService,
   AdminUserService,
+  HistoriaMesService,
+  ContactoVoluntariadoService,
+  INITIAL_HISTORIA_MES,
+  INITIAL_CONTACTO_VOLUNTARIADO,
   isSupabaseConfigured,
 } from '../lib/supabase';
 import { buildWhatsAppPhoneOnlyUrl } from '../lib/whatsapp';
@@ -71,6 +79,7 @@ interface AdminDashboardProps {
 
 type AdminTab =
   | 'perros'
+  | 'historia'
   | 'perdidos'
   | 'necesidades'
   | 'eventos'
@@ -111,6 +120,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [padrinos, setPadrinos] = useState<any[]>([]);
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
   const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
+  const [historiaMes, setHistoriaMes] = useState<HistoriaMes>(() => HistoriaMesService.get() || INITIAL_HISTORIA_MES);
+  const [contactoVoluntariado, setContactoVoluntariado] = useState<ContactoVoluntariado>(() => ContactoVoluntariadoService.get() || INITIAL_CONTACTO_VOLUNTARIADO);
   const [newAdminForm, setNewAdminForm] = useState<{
     email: string;
     password: string;
@@ -769,6 +780,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // HISTORIA DEL MES
+  const handleSaveHistoriaMes = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const updated = HistoriaMesService.update(historiaMes);
+      setHistoriaMes(updated);
+      onShowToast('success', 'Historia del Mes Guardada', 'Los cambios y la foto se actualizaron con éxito.');
+    } catch (err: any) {
+      onShowToast('error', 'Error al guardar historia', err.message || 'No se pudo guardar la información.');
+    }
+  };
+
+  const handleHistoriaPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        if (result) {
+          setHistoriaMes((prev) => ({ ...prev, foto_url: result }));
+          onShowToast('info', 'Foto Cargada', 'Foto seleccionada desde tu dispositivo. Haz clic en "Guardar Cambios" para confirmar.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // CONTACTO DIRECTO DE VOLUNTARIADO
+  const handleSaveContactoVoluntariado = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const updated = ContactoVoluntariadoService.update(contactoVoluntariado);
+      setContactoVoluntariado(updated);
+      onShowToast('success', 'Contacto Directo Actualizado', 'Se actualizaron los datos y la foto del coordinador de voluntariado.');
+    } catch (err: any) {
+      onShowToast('error', 'Error al guardar contacto', err.message || 'No se pudo guardar la información.');
+    }
+  };
+
+  const handleContactoPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        if (result) {
+          setContactoVoluntariado((prev) => ({ ...prev, foto_url: result }));
+          onShowToast('info', 'Foto Cargada', 'Foto seleccionada desde tu dispositivo. Haz clic en "Guardar Contacto Directo" para confirmar.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Contadores para badges
   const pendingVouchersCount = vouchers.filter((v) => v.estado === 'Pendiente').length;
   const pendingAdopcionesCount = adopciones.filter((a) => a.estado === 'Pendiente').length;
@@ -952,6 +1017,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'perros' ? 'bg-amber-700 text-white' : 'bg-stone-200 text-stone-700'}`}>
               {dogs.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('historia'); setSearchQuery(''); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all ${
+              activeTab === 'historia'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-stone-700 hover:bg-stone-100'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Historia del Mes</span>
           </button>
 
           <button
@@ -1193,6 +1270,207 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {/* PESTAÑA: HISTORIA DEL MES */}
+      {activeTab === 'historia' && (
+        <div className="space-y-6">
+          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <h3 className="text-lg font-black text-stone-900">Editar Historia del Mes (Portada de Inicio)</h3>
+              </div>
+              <p className="text-xs text-stone-500">
+                Personaliza la imagen principal destacada en la página de inicio, la frase inspiradora y los textos de apoyo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveHistoriaMes}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all"
+            >
+              <Check className="w-4 h-4" />
+              <span>Guardar Cambios</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Formulario de Edición */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+              <form onSubmit={handleSaveHistoriaMes} className="space-y-4 text-xs">
+                
+                {/* 1. Subida de Foto desde Almacenamiento Interno o URL */}
+                <div className="space-y-2 p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                  <label className="font-black text-stone-900 block text-xs flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-amber-600" />
+                      <span>Foto de Portada de la Historia</span>
+                    </span>
+                    <span className="text-[11px] font-normal text-stone-500">Almacenamiento interno / Dispositivo</span>
+                  </label>
+
+                  <div className="space-y-3 pt-1">
+                    {/* Botón de subida de archivo */}
+                    <label className="flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100/50 text-amber-900 cursor-pointer font-bold transition-all text-xs">
+                      <Upload className="w-4 h-4 text-amber-600" />
+                      <span>Subir foto desde dispositivo o almacenamiento</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHistoriaPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* O ingresar URL directa */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-stone-600 mb-1">
+                        O pegar URL directa de la imagen:
+                      </label>
+                      <input
+                        type="url"
+                        value={historiaMes.foto_url}
+                        onChange={(e) => setHistoriaMes({ ...historiaMes, foto_url: e.target.value })}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full p-2.5 rounded-xl border border-stone-300 bg-white text-xs outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Títulos y Etiquetas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Etiqueta Principal (Badge)</label>
+                    <input
+                      type="text"
+                      required
+                      value={historiaMes.titulo}
+                      onChange={(e) => setHistoriaMes({ ...historiaMes, titulo: e.target.value })}
+                      placeholder="Historia del Mes"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Subtítulo Descriptivo</label>
+                    <input
+                      type="text"
+                      value={historiaMes.subtitulo || ''}
+                      onChange={(e) => setHistoriaMes({ ...historiaMes, subtitulo: e.target.value })}
+                      placeholder="Rescatados con amor"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Frase / Cita Inspiradora */}
+                <div>
+                  <label className="font-bold text-stone-700 block mb-1">
+                    Frase o Cita Inspiradora de la Portada
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={historiaMes.frase}
+                    onChange={(e) => setHistoriaMes({ ...historiaMes, frase: e.target.value })}
+                    placeholder='"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."'
+                    className="w-full p-3 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500 text-xs leading-relaxed"
+                  />
+                  <p className="text-[11px] text-stone-400 mt-1">
+                    Este texto aparece resaltado con tipografía destacada sobre la foto de portada.
+                  </p>
+                </div>
+
+                {/* 4. Tarjeta Flotante Inferior de Estadísticas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Texto de Perros Cuidados</label>
+                    <input
+                      type="text"
+                      value={historiaMes.perros_cuidados_texto || ''}
+                      onChange={(e) => setHistoriaMes({ ...historiaMes, perros_cuidados_texto: e.target.value })}
+                      placeholder="45 Perros bajo nuestro cuidado"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Subtexto de Cuidados</label>
+                    <input
+                      type="text"
+                      value={historiaMes.perros_cuidados_subtexto || ''}
+                      onChange={(e) => setHistoriaMes({ ...historiaMes, perros_cuidados_subtexto: e.target.value })}
+                      placeholder="Alimentados, cuidados y amados a diario"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Guardar Cambios de Historia del Mes</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Vista Previa en Tiempo Real de la Portada */}
+            <div className="lg:col-span-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-amber-600" />
+                  <span>Vista Previa en Tiempo Real</span>
+                </span>
+                <span className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-medium">
+                  Así se ve en el inicio
+                </span>
+              </div>
+
+              <div className="bg-white p-3 rounded-2xl shadow-md border border-stone-200/80 overflow-hidden">
+                <div className="relative h-80 rounded-xl overflow-hidden group">
+                  <img
+                    src={historiaMes.foto_url || 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'}
+                    alt="Vista previa historia del mes"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wider">
+                        {historiaMes.titulo || 'Historia del Mes'}
+                      </span>
+                      {historiaMes.subtitulo && (
+                        <span className="text-xs text-stone-300">{historiaMes.subtitulo}</span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-bold mt-1.5 text-white leading-snug line-clamp-3">
+                      {historiaMes.frase}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Floating badge preview */}
+                <div className="mt-3 bg-amber-50 rounded-xl p-3 flex items-center justify-between border border-amber-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      <Heart className="w-4 h-4 fill-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-stone-900">{historiaMes.perros_cuidados_texto || '45 Perros bajo nuestro cuidado'}</p>
+                      <p className="text-[10px] text-stone-500">{historiaMes.perros_cuidados_subtexto || 'Alimentados, cuidados y amados a diario'}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-700 underline">
+                    Conócelos
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1725,6 +2003,124 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* PESTAÑA: VOLUNTARIOS */}
       {activeTab === 'voluntarios' && (
         <div className="space-y-6">
+          
+          {/* Tarjeta de Gestión del Contacto Directo de Voluntariado */}
+          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <h3 className="text-lg font-black text-stone-900">Contacto Directo de Voluntariado (Ariel)</h3>
+                </div>
+                <p className="text-xs text-stone-500">
+                  Actualiza la foto del coordinador, nombre, cargo, teléfono de WhatsApp y horarios mostrados en la sección de voluntariado.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveContactoVoluntariado}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                <Check className="w-4 h-4" />
+                <span>Guardar Contacto Directo</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveContactoVoluntariado} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Selector de Foto desde Almacenamiento Interno o URL */}
+                <div className="lg:col-span-4 p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+                  <label className="font-bold text-stone-800 block text-xs flex items-center justify-between">
+                    <span>Foto del Contacto Directo</span>
+                    <span className="text-[10px] text-stone-400">Dispositivo / Almacenamiento</span>
+                  </label>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-500 bg-stone-200 flex-shrink-0">
+                      <img
+                        src={contactoVoluntariado.foto_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
+                        alt="Vista previa contacto"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="flex items-center justify-center gap-2 p-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-100/50 text-amber-900 cursor-pointer font-bold transition-all text-xs">
+                        <Upload className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Subir foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleContactoPhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="url"
+                        value={contactoVoluntariado.foto_url}
+                        onChange={(e) => setContactoVoluntariado({ ...contactoVoluntariado, foto_url: e.target.value })}
+                        placeholder="O pegar URL..."
+                        className="w-full p-2 rounded-xl border border-stone-300 bg-white text-xs outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Campos de Contacto */}
+                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Nombre del Coordinador</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactoVoluntariado.nombre}
+                      onChange={(e) => setContactoVoluntariado({ ...contactoVoluntariado, nombre: e.target.value })}
+                      placeholder="Ariel"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-stone-700 block mb-1">Teléfono / WhatsApp Directo</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactoVoluntariado.telefono}
+                      onChange={(e) => setContactoVoluntariado({ ...contactoVoluntariado, telefono: e.target.value })}
+                      placeholder="+593 99 876 5432"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="font-bold text-stone-700 block mb-1">Cargo / Función</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactoVoluntariado.cargo}
+                      onChange={(e) => setContactoVoluntariado({ ...contactoVoluntariado, cargo: e.target.value })}
+                      placeholder="Coordinador General de Voluntariado y Bienestar Canino"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="font-bold text-stone-700 block mb-1">Ubicación de Referencia</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactoVoluntariado.ubicacion}
+                      onChange={(e) => setContactoVoluntariado({ ...contactoVoluntariado, ubicacion: e.target.value })}
+                      placeholder="Refugio DogHouse (Salinas / Santa Elena)"
+                      className="w-full p-2.5 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+              </div>
+            </form>
+          </div>
+
           <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center justify-between">
             <div>
               <h3 className="text-lg font-black text-stone-900">Voluntarios Registrados</h3>

@@ -135,3 +135,23 @@ export interface AdminUser {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface HistoriaMes {
+  titulo: string;
+  subtitulo?: string;
+  frase: string;
+  foto_url: string;
+  perros_cuidados_texto?: string;
+  perros_cuidados_subtexto?: string;
+}
+
+export interface ContactoVoluntariado {
+  nombre: string;
+  cargo: string;
+  ubicacion: string;
+  telefono: string;
+  foto_url: string;
+  horarios_dias?: string;
+  horarios_horas?: string;
+  horarios_detalle?: string;
+}

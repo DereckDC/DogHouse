@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Heart, 
   Dog, 
@@ -12,14 +12,16 @@ import {
   Sparkles,
   Award
 } from 'lucide-react';
-import { Perro, InsumoNecesidad } from '../types';
+import { Perro, InsumoNecesidad, HistoriaMes } from '../types';
 import { DOGHOUSE_LOGO_URL } from './Navbar';
+import { HistoriaMesService, INITIAL_HISTORIA_MES } from '../lib/supabase';
 
 interface HomeProps {
   onNavigate: (section: string) => void;
   dogs?: Perro[];
   urgentDogs?: Perro[];
   needs?: InsumoNecesidad[];
+  historiaMes?: HistoriaMes;
   onAdoptDog?: (dog: Perro) => void;
   onSelectDog?: (dog: Perro) => void;
 }
@@ -29,9 +31,24 @@ export const Home: React.FC<HomeProps> = ({
   dogs = [], 
   urgentDogs, 
   needs = [], 
+  historiaMes: propHistoria,
   onAdoptDog, 
   onSelectDog 
 }) => {
+  const [currentHistoria, setCurrentHistoria] = useState<HistoriaMes>(
+    propHistoria || HistoriaMesService.get() || INITIAL_HISTORIA_MES
+  );
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) {
+        setCurrentHistoria(e.detail);
+      }
+    };
+    window.addEventListener('doghouse_historia_mes_updated', handleUpdate);
+    return () => window.removeEventListener('doghouse_historia_mes_updated', handleUpdate);
+  }, []);
+
   // Obtener lista prioritaria de adopción
   const allDogs = dogs.length > 0 ? dogs : (urgentDogs || []);
   const urgentList = allDogs.filter((d) => d.urgente);
@@ -56,7 +73,7 @@ export const Home: React.FC<HomeProps> = ({
           {/* Hero Left Content */}
           <div className="lg:col-span-7 space-y-6">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 tracking-tight leading-[1.1]">
-              Cada vida rescatada merece una <span className="text-amber-600 underline decoration-amber-300 decoration-wavy decoration-2">segunda oportunidad</span>.
+              Cada vida rescatada merece una <span className="text-amber-600">segunda oportunidad</span>.
             </h1>
 
             <p className="text-lg text-stone-600 max-w-2xl leading-relaxed">
@@ -119,19 +136,21 @@ export const Home: React.FC<HomeProps> = ({
               <div className="bg-white p-3 rounded-2xl shadow-xl border border-stone-200/80 overflow-hidden">
                 <div className="relative h-80 sm:h-96 rounded-xl overflow-hidden group">
                   <img
-                    src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80"
-                    alt="Perritos felices en DogHouse"
+                    src={currentHistoria.foto_url}
+                    alt={currentHistoria.titulo || "Perritos felices en DogHouse"}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
                     <div className="flex items-center gap-2">
                       <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-xs font-bold uppercase tracking-wider">
-                        Historia del Mes
+                        {currentHistoria.titulo || "Historia del Mes"}
                       </span>
-                      <span className="text-xs text-stone-300">Rescatados con amor</span>
+                      {currentHistoria.subtitulo && (
+                        <span className="text-xs text-stone-300">{currentHistoria.subtitulo}</span>
+                      )}
                     </div>
-                    <h3 className="text-xl font-bold mt-1 text-white">
-                      "No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."
+                    <h3 className="text-xl font-bold mt-1 text-white leading-snug">
+                      {currentHistoria.frase}
                     </h3>
                   </div>
                 </div>
@@ -143,8 +162,8 @@ export const Home: React.FC<HomeProps> = ({
                       <Heart className="w-4 h-4 fill-white" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-stone-900">45 Perros bajo nuestro cuidado</p>
-                      <p className="text-[11px] text-stone-500">Alimentados, cuidados y amados a diario</p>
+                      <p className="text-xs font-bold text-stone-900">{currentHistoria.perros_cuidados_texto || "45 Perros bajo nuestro cuidado"}</p>
+                      <p className="text-[11px] text-stone-500">{currentHistoria.perros_cuidados_subtexto || "Alimentados, cuidados y amados a diario"}</p>
                     </div>
                   </div>
                   <button 

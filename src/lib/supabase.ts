@@ -9,6 +9,8 @@ import {
   ApadrinamientoFormValues,
   VoluntariadoFormValues,
   AdminUser,
+  HistoriaMes,
+  ContactoVoluntariado,
 } from '../types';
 
 /**
@@ -445,6 +447,81 @@ export const INITIAL_LOST_DOGS: PerroPerdidoReporte[] = [
     created_at: '2026-09-02T10:00:00.000Z',
   },
 ];
+
+export const INITIAL_HISTORIA_MES: HistoriaMes = {
+  titulo: 'Historia del Mes',
+  subtitulo: 'Rescatados con amor',
+  frase: '"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."',
+  foto_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80',
+  perros_cuidados_texto: '45 Perros bajo nuestro cuidado',
+  perros_cuidados_subtexto: 'Alimentados, cuidados y amados a diario',
+};
+
+export const INITIAL_CONTACTO_VOLUNTARIADO: ContactoVoluntariado = {
+  nombre: 'Ariel',
+  cargo: 'Coordinador General de Voluntariado y Bienestar Canino',
+  ubicacion: 'Refugio DogHouse (Salinas / Santa Elena)',
+  telefono: '+593 99 876 5432',
+  foto_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+  horarios_dias: 'Sábados y Domingos',
+  horarios_horas: '09:00 AM a 01:30 PM',
+  horarios_detalle: 'Jornadas entre semana previa cita',
+};
+
+const STORAGE_HISTORIA_MES_KEY = 'doghouse_historia_mes';
+const STORAGE_CONTACTO_VOLUNTARIADO_KEY = 'doghouse_contacto_voluntariado';
+
+export const HistoriaMesService = {
+  get(): HistoriaMes {
+    try {
+      const stored = localStorage.getItem(STORAGE_HISTORIA_MES_KEY);
+      if (stored) {
+        return { ...INITIAL_HISTORIA_MES, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      console.error('Error loading HistoriaMes from storage:', e);
+    }
+    return INITIAL_HISTORIA_MES;
+  },
+
+  update(data: Partial<HistoriaMes>): HistoriaMes {
+    const current = this.get();
+    const updated = { ...current, ...data };
+    try {
+      localStorage.setItem(STORAGE_HISTORIA_MES_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('doghouse_historia_mes_updated', { detail: updated }));
+    } catch (e) {
+      console.error('Error saving HistoriaMes to storage:', e);
+    }
+    return updated;
+  }
+};
+
+export const ContactoVoluntariadoService = {
+  get(): ContactoVoluntariado {
+    try {
+      const stored = localStorage.getItem(STORAGE_CONTACTO_VOLUNTARIADO_KEY);
+      if (stored) {
+        return { ...INITIAL_CONTACTO_VOLUNTARIADO, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      console.error('Error loading ContactoVoluntariado from storage:', e);
+    }
+    return INITIAL_CONTACTO_VOLUNTARIADO;
+  },
+
+  update(data: Partial<ContactoVoluntariado>): ContactoVoluntariado {
+    const current = this.get();
+    const updated = { ...current, ...data };
+    try {
+      localStorage.setItem(STORAGE_CONTACTO_VOLUNTARIADO_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('doghouse_contacto_voluntariado_updated', { detail: updated }));
+    } catch (e) {
+      console.error('Error saving ContactoVoluntariado to storage:', e);
+    }
+    return updated;
+  }
+};
 
 /**
  * =======================================================================

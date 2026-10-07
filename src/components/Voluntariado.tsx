@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Send, 
@@ -14,17 +14,32 @@ import {
   HeartHandshake,
   AlertCircle
 } from 'lucide-react';
-import { VoluntariadoFormValues } from '../types';
+import { VoluntariadoFormValues, ContactoVoluntariado } from '../types';
 import { ECUADOR_PROVINCIAS } from './FormularioAdopcion';
 import { buildWhatsAppVoluntariadoUrl, SHELTER_PHONE_ECUADOR } from '../lib/whatsapp';
-import { SubmissionsService } from '../lib/supabase';
+import { SubmissionsService, ContactoVoluntariadoService, INITIAL_CONTACTO_VOLUNTARIADO } from '../lib/supabase';
 import confetti from 'canvas-confetti';
 
 interface VoluntariadoProps {
   onShowToast: (tipo: 'success' | 'info' | 'error', titulo: string, mensaje: string) => void;
+  contacto?: ContactoVoluntariado;
 }
 
-export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
+export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast, contacto: initialContacto }) => {
+  const [contacto, setContacto] = useState<ContactoVoluntariado>(
+    initialContacto || ContactoVoluntariadoService.get() || INITIAL_CONTACTO_VOLUNTARIADO
+  );
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) {
+        setContacto(e.detail);
+      }
+    };
+    window.addEventListener('doghouse_contacto_voluntariado_updated', handleUpdate);
+    return () => window.removeEventListener('doghouse_contacto_voluntariado_updated', handleUpdate);
+  }, []);
+
   const [formData, setFormData] = useState<VoluntariadoFormValues>({
     nombre: '',
     apellido: '',
@@ -156,29 +171,29 @@ export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
         </p>
       </div>
 
-      {/* TARJETA DE CONTACTO DIRECTO DE ARIEL (COORDINADOR) */}
-      <section className="bg-gradient-to-r from-stone-900 via-stone-800 to-amber-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-stone-800">
+      {/* TARJETA DE CONTACTO DIRECTO DE COORDINADOR DE VOLUNTARIADO */}
+      <section className="bg-gradient-to-r from-stone-900 via-stone-800 to-amber-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-stone-800 relative">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           <div className="lg:col-span-4 flex items-center sm:items-start gap-4">
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-amber-500 shadow-md flex-shrink-0 bg-stone-700">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-                alt="Ariel - Coordinador de Voluntariado"
+                src={contacto.foto_url}
+                alt={`${contacto.nombre} - Coordinador de Voluntariado`}
                 className="w-full h-full object-cover"
               />
-              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-stone-900" />
+              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-stone-900 z-10" />
             </div>
 
             <div className="space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
                 Contacto Directo
               </span>
-              <h3 className="text-2xl font-black text-white">Ariel</h3>
-              <p className="text-xs text-stone-300 font-medium">Coordinador General de Voluntariado y Bienestar Canino</p>
+              <h3 className="text-2xl font-black text-white">{contacto.nombre}</h3>
+              <p className="text-xs text-stone-300 font-medium">{contacto.cargo}</p>
               <p className="text-[11px] text-stone-400 flex items-center gap-1 mt-1">
                 <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                <span>Refugio DogHouse (Quito - Valle)</span>
+                <span>{contacto.ubicacion}</span>
               </p>
             </div>
           </div>
@@ -189,9 +204,9 @@ export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
                 Horarios de Turnos
               </span>
-              <p className="text-sm font-bold text-white mt-1">Sábados y Domingos</p>
-              <p className="text-xs text-stone-300">09:00 AM a 01:30 PM</p>
-              <p className="text-[11px] text-stone-400 mt-1">Jornadas entre semana previa cita</p>
+              <p className="text-sm font-bold text-white mt-1">{contacto.horarios_dias || 'Sábados y Domingos'}</p>
+              <p className="text-xs text-stone-300">{contacto.horarios_horas || '09:00 AM a 01:30 PM'}</p>
+              <p className="text-[11px] text-stone-400 mt-1">{contacto.horarios_detalle || 'Jornadas entre semana previa cita'}</p>
             </div>
 
             <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
@@ -208,12 +223,12 @@ export const Voluntariado: React.FC<VoluntariadoProps> = ({ onShowToast }) => {
               <div>
                 <span className="text-stone-400 text-xs flex items-center gap-1.5 font-semibold">
                   <Phone className="w-3.5 h-3.5 text-sky-400" />
-                  Escribir a Ariel
+                  Escribir a {contacto.nombre}
                 </span>
-                <p className="text-sm font-bold text-white mt-1">+593 99 876 5432</p>
+                <p className="text-sm font-bold text-white mt-1">{contacto.telefono}</p>
               </div>
               <a
-                href={`https://wa.me/${SHELTER_PHONE_ECUADOR}?text=${encodeURIComponent('Hola Ariel, me interesa unirme al voluntariado en DogHouse.')}`}
+                href={`https://wa.me/${SHELTER_PHONE_ECUADOR}?text=${encodeURIComponent(`Hola ${contacto.nombre}, me interesa unirme al voluntariado en DogHouse.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"

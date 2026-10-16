@@ -63,8 +63,8 @@ import {
   AdminUserService,
   HistoriaMesService,
   ContactoVoluntariadoService,
-  INITIAL_HISTORIA_MES,
-  INITIAL_CONTACTO_VOLUNTARIADO,
+  ShelterConfigService,
+  DEFAULT_REFUGIO_CONFIG,
   isSupabaseConfigured,
 } from '../lib/supabase';
 import { buildWhatsAppPhoneOnlyUrl } from '../lib/whatsapp';
@@ -120,8 +120,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [padrinos, setPadrinos] = useState<any[]>([]);
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
   const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
-  const [historiaMes, setHistoriaMes] = useState<HistoriaMes>(() => HistoriaMesService.get() || INITIAL_HISTORIA_MES);
-  const [contactoVoluntariado, setContactoVoluntariado] = useState<ContactoVoluntariado>(() => ContactoVoluntariadoService.get() || INITIAL_CONTACTO_VOLUNTARIADO);
+  const [historiaMes, setHistoriaMes] = useState<HistoriaMes>(() => HistoriaMesService.get());
+  const [contactoVoluntariado, setContactoVoluntariado] = useState<ContactoVoluntariado>(() => ContactoVoluntariadoService.get());
   const [newAdminForm, setNewAdminForm] = useState<{
     email: string;
     password: string;
@@ -166,9 +166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setSessionUser(parsed);
                 }
               } catch (e) {
-                if (localSaved === 'true') {
-                  setSessionUser({ email: 'admin@refugiodoghouse.ec', nombre: 'Admin General', rol: 'Superadmin', activo: true });
-                }
+                localStorage.removeItem('doghouse_admin_session');
               }
             }
           }
@@ -207,11 +205,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
   }, []);
 
-  // 2. Carga general de datos de Supabase (Incluyendo tabla public.admins)
+  // 2. Carga general de datos de Supabase (Incluyendo tabla public.admins y configuracion_refugio)
   const loadDashboardData = async () => {
     setLoadingData(true);
     try {
-      const [d, l, n, v, e, ad, pad, vol, adm] = await Promise.all([
+      const [d, l, n, v, e, ad, pad, vol, adm, cfg] = await Promise.all([
         DogService.getAll(),
         LostDogsService.getAll(),
         NeedsService.getAll(),
@@ -221,6 +219,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         SubmissionsService.getApadrinamientos(),
         SubmissionsService.getVoluntariados(),
         AdminUserService.getAll(),
+        ShelterConfigService.get(),
       ]);
 
       setDogs(d);
@@ -232,6 +231,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setPadrinos(pad);
       setVoluntarios(vol);
       setAdminsList(adm);
+      if (cfg) {
+        setHistoriaMes(cfg.historia_mes);
+        setContactoVoluntariado(cfg.contacto_voluntariado);
+      }
     } catch (err: any) {
       console.error('Error cargando datos del panel administrativo:', err);
       onShowToast('error', 'Error de sincronización', err.message || 'No se pudieron consultar los datos de Supabase.');
@@ -781,12 +784,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // HISTORIA DEL MES
-  const handleSaveHistoriaMes = (e: React.FormEvent) => {
+  const handleSaveHistoriaMes = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updated = HistoriaMesService.update(historiaMes);
+      const updated = await HistoriaMesService.update(historiaMes);
       setHistoriaMes(updated);
-      onShowToast('success', 'Historia del Mes Guardada', 'Los cambios y la foto se actualizaron con éxito.');
+      onShowToast('success', 'Historia del Mes Guardada', 'Los cambios y la foto se actualizaron con éxito en la base de datos.');
     } catch (err: any) {
       onShowToast('error', 'Error al guardar historia', err.message || 'No se pudo guardar la información.');
     }
@@ -808,12 +811,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // CONTACTO DIRECTO DE VOLUNTARIADO
-  const handleSaveContactoVoluntariado = (e: React.FormEvent) => {
+  const handleSaveContactoVoluntariado = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updated = ContactoVoluntariadoService.update(contactoVoluntariado);
+      const updated = await ContactoVoluntariadoService.update(contactoVoluntariado);
       setContactoVoluntariado(updated);
-      onShowToast('success', 'Contacto Directo Actualizado', 'Se actualizaron los datos y la foto del coordinador de voluntariado.');
+      onShowToast('success', 'Contacto Directo Actualizado', 'Se actualizaron los datos y la foto del coordinador de voluntariado en la base de datos.');
     } catch (err: any) {
       onShowToast('error', 'Error al guardar contacto', err.message || 'No se pudo guardar la información.');
     }

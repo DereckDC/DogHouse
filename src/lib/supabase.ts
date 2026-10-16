@@ -11,6 +11,8 @@ import {
   AdminUser,
   HistoriaMes,
   ContactoVoluntariado,
+  RefugioConfig,
+  CuentaBancaria,
 } from '../types';
 
 /**
@@ -37,7 +39,6 @@ export function cleanSupabaseUrl(rawUrl?: string): string {
   if (!rawUrl) return '';
   let url = rawUrl.trim();
   url = url.replace(/\/+$/, '');
-  // Quitar sufijos de endpoints REST/API si el usuario los copió
   url = url.replace(/\/(rest|auth|graphql|storage)\/v1\/?$/i, '');
   url = url.replace(/\/+$/, '');
   return url;
@@ -96,12 +97,10 @@ export function clearSupabaseConfig(): void {
 
 // Instancia reactiva del cliente Supabase
 const currentConfig = getSupabaseConfig();
-const fallbackUrl = 'https://mock-doghouse-project.supabase.co';
-const fallbackKey = 'mock-anon-key-doghouse';
 
 export let supabase: SupabaseClient = createClient(
-  currentConfig.url || fallbackUrl,
-  currentConfig.anonKey || fallbackKey,
+  currentConfig.url || 'https://placeholder.supabase.co',
+  currentConfig.anonKey || 'placeholder',
   {
     auth: {
       persistSession: true,
@@ -112,8 +111,8 @@ export let supabase: SupabaseClient = createClient(
 );
 
 function initClient(url: string, key: string) {
-  const finalUrl = cleanSupabaseUrl(url) || fallbackUrl;
-  const finalKey = cleanSupabaseAnonKey(key) || fallbackKey;
+  const finalUrl = cleanSupabaseUrl(url) || 'https://placeholder.supabase.co';
+  const finalKey = cleanSupabaseAnonKey(key) || 'placeholder';
   supabase = createClient(finalUrl, finalKey, {
     auth: {
       persistSession: true,
@@ -125,7 +124,13 @@ function initClient(url: string, key: string) {
 
 export const isSupabaseConfigured = (): boolean => {
   const cfg = getSupabaseConfig();
-  return Boolean(cfg.url && cfg.anonKey && !cfg.url.includes('mock-doghouse-project'));
+  return Boolean(
+    cfg.url &&
+    cfg.anonKey &&
+    cfg.url.startsWith('http') &&
+    !cfg.url.includes('placeholder') &&
+    !cfg.url.includes('tu-proyecto')
+  );
 };
 
 /**
@@ -141,7 +146,7 @@ export async function testSupabaseConnection(): Promise<{
     if (!isSupabaseConfigured()) {
       return {
         success: false,
-        message: 'No se han configurado la URL y Anon Key de Supabase.',
+        message: 'No se han configurado la URL y Anon Key válidas de Supabase.',
       };
     }
 
@@ -176,351 +181,277 @@ export async function testSupabaseConnection(): Promise<{
 
 /**
  * =======================================================================
- * DATOS SEMILLA DE RESPALDO (Ecuador Shelter Data)
+ * CONFIGURACIÓN INSTITUCIONAL DEL REFUGIO (Tabla public.configuracion_refugio)
  * =======================================================================
  */
-export const INITIAL_DOGS: Perro[] = [
-  {
-    id: 'a1111111-1111-1111-1111-111111111111',
-    nombre: 'Rocky',
-    edad: '2 años',
-    tamanio: 'Mediano',
-    genero: 'Macho',
-    vacunas: true,
-    esterilizado: true,
-    foto_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Rescatado en Santa Elena / Salinas. Es muy cariñoso, enérgico y se lleva excelente con niños y otros perros.',
-    personalidad: ['Juguetón', 'Sociable', 'Protector'],
-    urgente: true,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
+export const DEFAULT_REFUGIO_CONFIG: RefugioConfig = {
+  id: 'doghouse_main',
+  nombre: 'Refugio DogHouse',
+  telefono: '593997948588',
+  telefono_display: '0997948588',
+  email: 'doghousesalinas@gmail.com',
+  ubicacion: 'Salinas, Santa Elena, Ecuador',
+  horarios: 'Lunes a Domingo: 10:00 AM - 01:00 PM',
+  politica_entrega: 'La entrega de perritos se hace directamente en el refugio (Salinas).',
+  redes: {
+    instagram: 'https://www.instagram.com/doghousesalinas.ec?stkn=cmo1MzBhcnFxa2g4',
+    facebook: 'https://www.facebook.com/share/1HDs2WsGbF/',
+    tiktok: 'https://www.tiktok.com/@refugiodoghousesalinas?_r=1&_t=ZS-99j6KTPCCt3',
+    paypal: 'https://www.paypal.com/paypalme/Doghousesalinas',
   },
-  {
-    id: 'a2222222-2222-2222-2222-222222222222',
-    nombre: 'Luna',
-    edad: '1 año y medio',
-    tamanio: 'Pequeño',
-    genero: 'Hembra',
-    vacunas: true,
-    esterilizado: true,
-    foto_url: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583511655826-05700d52f4d9?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Una perrita rescatada con pata lastimada, hoy 100% recuperada. Ama dormir en regazos y los paseos tranquilos.',
-    personalidad: ['Tranquila', 'Cariñosa', 'Apta para departamento'],
-    urgente: false,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'a3333333-3333-3333-3333-333333333333',
-    nombre: 'Thor',
-    edad: '3 años',
-    tamanio: 'Grande',
-    genero: 'Macho',
-    vacunas: true,
-    esterilizado: true,
-    foto_url: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Mestizo de Golden Retriever. Noble, leal y con un corazón enorme. Ideal para familias activas o casas con patio.',
-    personalidad: ['Noble', 'Leal', 'Atlético'],
-    urgente: false,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'a4444444-4444-4444-4444-444444444444',
-    nombre: 'Mía',
-    edad: '8 meses',
-    tamanio: 'Pequeño',
-    genero: 'Hembra',
-    vacunas: true,
-    esterilizado: false,
-    foto_url: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Cachorrita encontrada en Salinas. Es muy curiosa y aprende comandos básicos con rapidez.',
-    personalidad: ['Curiosa', 'Tierna', 'Aprende rápido'],
-    urgente: true,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'a5555555-5555-5555-5555-555555555555',
-    nombre: 'Max',
-    edad: '4 años',
-    tamanio: 'Mediano',
-    genero: 'Macho',
-    vacunas: true,
-    esterilizado: true,
-    foto_url: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Compañero calmado, educado para hacer sus necesidades afuera. Se adapta fácilmente a rutinas de personas que trabajan.',
-    personalidad: ['Educado', 'Tranquilo', 'Independiente'],
-    urgente: false,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'a6666666-6666-6666-6666-666666666666',
-    nombre: 'Canela',
-    edad: '1 año',
-    tamanio: 'Mediano',
-    genero: 'Hembra',
-    vacunas: true,
-    esterilizado: true,
-    foto_url: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-    fotos: [
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800&q=80',
-    ],
-    descripcion: 'Llena de alegría y vitalidad. Adora los juguetes de pelota y las caricias en la barriga.',
-    personalidad: ['Alegre', 'Divertida', 'Muy cariñosa'],
-    urgente: false,
-    estado: 'Disponible',
-    created_at: new Date().toISOString(),
-  },
-];
-
-export const INITIAL_NEEDS: InsumoNecesidad[] = [
-  {
-    id: 'b1111111-1111-1111-1111-111111111111',
-    categoria: 'Comida',
-    nombre: 'Balanceado para perros adultos (Chunky o Pro Plan)',
-    descripcion: 'Alimento de mantenimiento para 45 perros residentes.',
-    cantidad_meta: 30,
-    cantidad_actual: 12,
-    unidad: 'Sacos de 15kg',
-    prioridad: 'Alta',
-    urgente: true,
-  },
-  {
-    id: 'b2222222-2222-2222-2222-222222222222',
-    categoria: 'Comida',
-    nombre: 'Balanceado Puppy / Cachorros',
-    descripcion: 'Nutrición especial para camadas rescatadas recientemente.',
-    cantidad_meta: 10,
-    cantidad_actual: 3,
-    unidad: 'Sacos de 8kg',
-    prioridad: 'Alta',
-    urgente: true,
-  },
-  {
-    id: 'b3333333-3333-3333-3333-333333333333',
-    categoria: 'Medicinas',
-    nombre: 'Pastillas Antipulgas y Garrapatas (NexGard / Bravecto)',
-    descripcion: 'Tratamiento preventivo para todo el refugio.',
-    cantidad_meta: 50,
-    cantidad_actual: 28,
-    unidad: 'Tabletas',
-    prioridad: 'Alta',
-    urgente: true,
-  },
-  {
-    id: 'b4444444-4444-4444-4444-444444444444',
-    categoria: 'Materiales y Limpieza',
-    nombre: 'Desinfectante de amonio cuaternario y cloro',
-    descripcion: 'Limpieza e higiene diaria de caniles y patios.',
-    cantidad_meta: 20,
-    cantidad_actual: 14,
-    unidad: 'Galones',
-    prioridad: 'Media',
-    urgente: false,
-  },
-  {
-    id: 'b5555555-5555-5555-5555-555555555555',
-    categoria: 'Abrigo y Camas',
-    nombre: 'Cobijas térmicas y toallas limpias',
-    descripcion: 'Abrigo para la temporada fría en el refugio.',
-    cantidad_meta: 40,
-    cantidad_actual: 31,
-    unidad: 'Unidades',
-    prioridad: 'Baja',
-    urgente: false,
-  },
-];
-
-export const INITIAL_EVENTS: EventoRefugio[] = [
-  {
-    id: 'c1111111-1111-1111-1111-111111111111',
-    titulo: 'Gran Feria de Adopción "Huellas con Amor"',
-    tipo: 'Evento Actual',
-    fecha: 'Sábado 20 de Septiembre, 2026',
-    hora: '10:00 AM - 04:00 PM',
-    lugar: 'Parque Central de Salinas / Malecón, Santa Elena',
-    descripcion_corta: 'Ven a conocer a más de 20 perritos listos para encontrar su hogar definitivo.',
-    descripcion_completa: 'Jornada completa de adopción responsable. Habrá carpa veterinaria con desparasitación gratuita para mascotas visitantes, venta de snacks benéficos y charla de adiestramiento canino positivo con especialistas.',
+  cuentas_bancarias: [
+    {
+      banco: 'Banco Pichincha',
+      tipo: 'Cuenta de Ahorros',
+      numero: '2209081738',
+      titular: 'Yeimmy Jesús Piguave Perero',
+      identificacion: '0928389253',
+      email: 'doghousesalinas@gmail.com',
+      color: 'border-yellow-400 bg-yellow-50/40',
+      tag: 'Ahorro Pichincha',
+    },
+    {
+      banco: 'Banco del Pacífico',
+      tipo: 'Cuenta de Ahorros',
+      numero: '1056329695',
+      titular: 'Yeimmy Jesús Piguave Perero',
+      identificacion: '0928389253',
+      email: 'doghousesalinas@gmail.com',
+      color: 'border-blue-400 bg-blue-50/40',
+      tag: 'Ahorro Pacífico',
+    },
+    {
+      banco: 'Banco Guayaquil',
+      tipo: 'Cuenta de Ahorros',
+      numero: '0034356836',
+      titular: 'Ariel Enrique Roman Lainez',
+      identificacion: '0922691365',
+      email: 'doghousesalinas@gmail.com',
+      color: 'border-pink-400 bg-pink-50/40',
+      tag: 'Ahorro Guayaquil',
+    },
+  ],
+  historia_mes: {
+    titulo: 'Historia del Mes',
+    subtitulo: 'Rescatados con amor',
+    frase: '"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."',
     foto_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80',
-    requisitos: ['Llevar copia de cédula y planilla de luz', 'Toda la familia debe estar de acuerdo', 'Collar y correa para el peludito'],
-    destacado: true,
+    perros_cuidados_texto: 'Perros bajo nuestro cuidado',
+    perros_cuidados_subtexto: 'Alimentados, cuidados y amados a diario',
   },
-  {
-    id: 'c2222222-2222-2222-2222-222222222222',
-    titulo: 'Jornada Masiva de Esterilización a Bajo Costo',
-    tipo: 'Próximamente',
-    fecha: 'Domingo 5 de Octubre, 2026',
-    hora: '08:30 AM - 02:00 PM',
-    lugar: 'Sede Refugio DogHouse (Salinas, Santa Elena)',
-    descripcion_corta: 'Campaña preventiva comunitaria para perros y gatos.',
-    descripcion_completa: 'Cirugías a costo social para esterilización de perros y gatos comunitarios o de familias de escasos recursos. Cupos limitados con previa reserva para garantizar el bienestar post-operatorio.',
-    foto_url: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=1000&q=80',
-    requisitos: ['Ayuno de 8 horas previas', 'Cobija limpia para recuperación', 'Mascota sana mayor a 4 meses'],
-    destacado: false,
+  contacto_voluntariado: {
+    nombre: 'Ariel',
+    cargo: 'Coordinador General de Voluntariado y Bienestar Canino',
+    ubicacion: 'Refugio DogHouse (Salinas / Santa Elena)',
+    telefono: '0997948588',
+    foto_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    horarios_dias: 'Sábados y Domingos',
+    horarios_horas: '09:00 AM a 01:30 PM',
+    horarios_detalle: 'Jornadas entre semana previa cita',
   },
-  {
-    id: 'c3333333-3333-3333-3333-333333333333',
-    titulo: 'Perrotón y Caminata Solidaria 3K',
-    tipo: 'Próximamente',
-    fecha: 'Sábado 24 de Octubre, 2026',
-    hora: '09:00 AM - 01:00 PM',
-    lugar: 'Paseo Marino de Salinas',
-    descripcion_corta: 'Caminata recreativa con tu perrito para recaudar fondos para alimento e insumos.',
-    descripcion_completa: 'Una mañana deportiva y solidaria. Kit del corredor con pañoleta oficial de DogHouse, hidratación, premios al perro más simpático y feria de emprendimientos pet-friendly.',
-    foto_url: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=1000&q=80',
-    requisitos: ['Inscripción voluntaria pro-refugio', 'Mascotas con correa obligatoria'],
-    destacado: false,
-  },
-];
-
-export const INITIAL_LOST_DOGS: PerroPerdidoReporte[] = [
-  {
-    id: 'd1111111-1111-1111-1111-111111111111',
-    nombre_perro: 'Toby',
-    fecha_perdido: '2026-09-08',
-    foto_url: 'https://images.unsplash.com/photo-1505628346881-b72b27e84530?auto=format&fit=crop&w=800&q=80',
-    ubicacion_ultima_vez: 'Sector Chipipe, cerca del hotel Miramar, Salinas',
-    maps_url: 'https://maps.google.com/?q=Chipipe+Salinas+Ecuador',
-    informacion_relevante: 'Poodle mediano color miel. Llevaba collar rojo sin placa. Es tímido ante ruidos fuertes pero muy dócil.',
-    contacto_nombre: 'Andrea Viteri',
-    contacto_telefono: '0997948588',
-    recompensa: '$150 USD',
-    estado: 'Buscando',
-    created_at: '2026-09-08T15:00:00.000Z',
-  },
-  {
-    id: 'd2222222-2222-2222-2222-222222222222',
-    nombre_perro: 'Bruno',
-    fecha_perdido: '2026-09-11',
-    foto_url: 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80',
-    ubicacion_ultima_vez: 'Entrada a La Chocolatera / Base Naval, Salinas',
-    maps_url: 'https://maps.google.com/?q=La+Chocolatera+Salinas',
-    informacion_relevante: 'Mestizo de Labrador negro con pecho blanco. Mancha característica en oreja izquierda. Muy juguetón y amigable.',
-    contacto_nombre: 'Esteban Carrera',
-    contacto_telefono: '0997948588',
-    recompensa: 'Gratificación voluntaria',
-    estado: 'Buscando',
-    created_at: '2026-09-11T18:30:00.000Z',
-  },
-  {
-    id: 'd3333333-3333-3333-3333-333333333333',
-    nombre_perro: 'Kira',
-    fecha_perdido: '2026-09-02',
-    foto_url: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=800&q=80',
-    ubicacion_ultima_vez: 'Sector San Lorenzo, Salinas',
-    maps_url: 'https://maps.google.com/?q=San+Lorenzo+Salinas',
-    informacion_relevante: 'Perra husky siberiana ojos azules. ¡REUNIDA CON ÉXITO CON SU FAMILIA GRACIAS A LA COMUNIDAD!',
-    contacto_nombre: 'Familia Salazar',
-    contacto_telefono: '0997948588',
-    estado: 'Reunido con familia',
-    created_at: '2026-09-02T10:00:00.000Z',
-  },
-];
-
-export const INITIAL_HISTORIA_MES: HistoriaMes = {
-  titulo: 'Historia del Mes',
-  subtitulo: 'Rescatados con amor',
-  frase: '"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."',
-  foto_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80',
-  perros_cuidados_texto: '45 Perros bajo nuestro cuidado',
-  perros_cuidados_subtexto: 'Alimentados, cuidados y amados a diario',
 };
 
-export const INITIAL_CONTACTO_VOLUNTARIADO: ContactoVoluntariado = {
-  nombre: 'Ariel',
-  cargo: 'Coordinador General de Voluntariado y Bienestar Canino',
-  ubicacion: 'Refugio DogHouse (Salinas / Santa Elena)',
-  telefono: '+593 99 876 5432',
-  foto_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-  horarios_dias: 'Sábados y Domingos',
-  horarios_horas: '09:00 AM a 01:30 PM',
-  horarios_detalle: 'Jornadas entre semana previa cita',
-};
+export const INITIAL_CONTACTO_VOLUNTARIADO = DEFAULT_REFUGIO_CONFIG.contacto_voluntariado;
+export const INITIAL_HISTORIA_MES = DEFAULT_REFUGIO_CONFIG.historia_mes;
 
-const STORAGE_HISTORIA_MES_KEY = 'doghouse_historia_mes';
-const STORAGE_CONTACTO_VOLUNTARIADO_KEY = 'doghouse_contacto_voluntariado';
+const STORAGE_REFUGIO_CONFIG_KEY = 'doghouse_refugio_config_cached';
+
+export const ShelterConfigService = {
+  getSync(): RefugioConfig {
+    try {
+      const cached = localStorage.getItem(STORAGE_REFUGIO_CONFIG_KEY);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {}
+    return DEFAULT_REFUGIO_CONFIG;
+  },
+
+  async get(): Promise<RefugioConfig> {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('configuracion_refugio')
+          .select('*')
+          .eq('id', 'doghouse_main')
+          .maybeSingle();
+
+        if (error) {
+          console.warn('Advertencia consultando configuracion_refugio:', error.message);
+        } else if (data) {
+          const cfg: RefugioConfig = {
+            id: data.id,
+            nombre: data.nombre || DEFAULT_REFUGIO_CONFIG.nombre,
+            telefono: data.telefono || DEFAULT_REFUGIO_CONFIG.telefono,
+            telefono_display: data.telefono_display || DEFAULT_REFUGIO_CONFIG.telefono_display,
+            email: data.email || DEFAULT_REFUGIO_CONFIG.email,
+            ubicacion: data.ubicacion || DEFAULT_REFUGIO_CONFIG.ubicacion,
+            horarios: data.horarios || DEFAULT_REFUGIO_CONFIG.horarios,
+            politica_entrega: data.politica_entrega || DEFAULT_REFUGIO_CONFIG.politica_entrega,
+            redes: {
+              instagram: data.instagram || DEFAULT_REFUGIO_CONFIG.redes.instagram,
+              facebook: data.facebook || DEFAULT_REFUGIO_CONFIG.redes.facebook,
+              tiktok: data.tiktok || DEFAULT_REFUGIO_CONFIG.redes.tiktok,
+              paypal: data.paypal || DEFAULT_REFUGIO_CONFIG.redes.paypal,
+            },
+            cuentas_bancarias: Array.isArray(data.cuentas_bancarias) && data.cuentas_bancarias.length > 0
+              ? data.cuentas_bancarias
+              : DEFAULT_REFUGIO_CONFIG.cuentas_bancarias,
+            historia_mes: {
+              titulo: data.historia_titulo || DEFAULT_REFUGIO_CONFIG.historia_mes.titulo,
+              subtitulo: data.historia_subtitulo || DEFAULT_REFUGIO_CONFIG.historia_mes.subtitulo,
+              frase: data.historia_frase || DEFAULT_REFUGIO_CONFIG.historia_mes.frase,
+              foto_url: data.historia_foto_url || DEFAULT_REFUGIO_CONFIG.historia_mes.foto_url,
+              perros_cuidados_texto: data.historia_perros_cuidados_texto || DEFAULT_REFUGIO_CONFIG.historia_mes.perros_cuidados_texto,
+              perros_cuidados_subtexto: data.historia_perros_cuidados_subtexto || DEFAULT_REFUGIO_CONFIG.historia_mes.perros_cuidados_subtexto,
+            },
+            contacto_voluntariado: {
+              nombre: data.contacto_voluntario_nombre || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.nombre,
+              cargo: data.contacto_voluntario_cargo || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.cargo,
+              ubicacion: data.contacto_voluntario_ubicacion || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.ubicacion,
+              telefono: data.contacto_voluntario_telefono || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.telefono,
+              foto_url: data.contacto_voluntario_foto_url || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.foto_url,
+              horarios_dias: data.contacto_voluntario_horarios_dias || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.horarios_dias,
+              horarios_horas: data.contacto_voluntario_horarios_horas || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.horarios_horas,
+              horarios_detalle: data.contacto_voluntario_horarios_detalle || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.horarios_detalle,
+            },
+            updated_at: data.updated_at,
+          };
+
+          try {
+            localStorage.setItem(STORAGE_REFUGIO_CONFIG_KEY, JSON.stringify(cfg));
+          } catch (e) {}
+          return cfg;
+        }
+      } catch (err) {
+        console.error('Error cargando configuración del refugio desde Supabase:', err);
+      }
+    }
+
+    return this.getSync();
+  },
+
+  async update(partial: Partial<RefugioConfig>): Promise<RefugioConfig> {
+    const current = await this.get();
+    const updated: RefugioConfig = {
+      ...current,
+      ...partial,
+      redes: { ...current.redes, ...(partial.redes || {}) },
+      historia_mes: { ...current.historia_mes, ...(partial.historia_mes || {}) },
+      contacto_voluntariado: { ...current.contacto_voluntariado, ...(partial.contacto_voluntariado || {}) },
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isSupabaseConfigured()) {
+      const dbPayload = {
+        id: 'doghouse_main',
+        nombre: updated.nombre,
+        telefono: updated.telefono,
+        telefono_display: updated.telefono_display,
+        email: updated.email,
+        ubicacion: updated.ubicacion,
+        horarios: updated.horarios,
+        politica_entrega: updated.politica_entrega,
+        instagram: updated.redes.instagram,
+        facebook: updated.redes.facebook,
+        tiktok: updated.redes.tiktok,
+        paypal: updated.redes.paypal,
+        cuentas_bancarias: updated.cuentas_bancarias,
+        historia_titulo: updated.historia_mes.titulo,
+        historia_subtitulo: updated.historia_mes.subtitulo || '',
+        historia_frase: updated.historia_mes.frase,
+        historia_foto_url: updated.historia_mes.foto_url,
+        historia_perros_cuidados_texto: updated.historia_mes.perros_cuidados_texto || '',
+        historia_perros_cuidados_subtexto: updated.historia_mes.perros_cuidados_subtexto || '',
+        contacto_voluntario_nombre: updated.contacto_voluntariado.nombre,
+        contacto_voluntario_cargo: updated.contacto_voluntariado.cargo,
+        contacto_voluntario_ubicacion: updated.contacto_voluntariado.ubicacion,
+        contacto_voluntario_telefono: updated.contacto_voluntariado.telefono,
+        contacto_voluntario_foto_url: updated.contacto_voluntariado.foto_url,
+        contacto_voluntario_horarios_dias: updated.contacto_voluntariado.horarios_dias || '',
+        contacto_voluntario_horarios_horas: updated.contacto_voluntariado.horarios_horas || '',
+        contacto_voluntario_horarios_detalle: updated.contacto_voluntariado.horarios_detalle || '',
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('configuracion_refugio')
+        .upsert(dbPayload, { onConflict: 'id' });
+
+      if (error) {
+        console.error('Error guardando configuracion_refugio en Supabase:', error);
+        throw new Error(error.message);
+      }
+    }
+
+    try {
+      localStorage.setItem(STORAGE_REFUGIO_CONFIG_KEY, JSON.stringify(updated));
+    } catch (e) {}
+
+    window.dispatchEvent(new CustomEvent('doghouse_refugio_config_updated', { detail: updated }));
+    window.dispatchEvent(new CustomEvent('doghouse_historia_mes_updated', { detail: updated.historia_mes }));
+    window.dispatchEvent(new CustomEvent('doghouse_contacto_voluntariado_updated', { detail: updated.contacto_voluntariado }));
+    return updated;
+  },
+};
 
 export const HistoriaMesService = {
   get(): HistoriaMes {
-    try {
-      const stored = localStorage.getItem(STORAGE_HISTORIA_MES_KEY);
-      if (stored) {
-        return { ...INITIAL_HISTORIA_MES, ...JSON.parse(stored) };
-      }
-    } catch (e) {
-      console.error('Error loading HistoriaMes from storage:', e);
-    }
-    return INITIAL_HISTORIA_MES;
+    return ShelterConfigService.getSync().historia_mes;
   },
 
-  update(data: Partial<HistoriaMes>): HistoriaMes {
-    const current = this.get();
-    const updated = { ...current, ...data };
-    try {
-      localStorage.setItem(STORAGE_HISTORIA_MES_KEY, JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('doghouse_historia_mes_updated', { detail: updated }));
-    } catch (e) {
-      console.error('Error saving HistoriaMes to storage:', e);
+  async update(data: Partial<HistoriaMes>): Promise<HistoriaMes> {
+    if (isSupabaseConfigured()) {
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('actualizar_historia_mes', {
+          p_titulo: data.titulo,
+          p_subtitulo: data.subtitulo || '',
+          p_frase: data.frase,
+          p_foto_url: data.foto_url,
+          p_perros_texto: data.perros_cuidados_texto || '',
+          p_perros_subtexto: data.perros_cuidados_subtexto || '',
+        });
+
+        if (!rpcError && rpcData) {
+          const currentCfg = ShelterConfigService.getSync();
+          const updatedCfg = {
+            ...currentCfg,
+            historia_mes: {
+              ...currentCfg.historia_mes,
+              ...data,
+            },
+          };
+          try {
+            localStorage.setItem(STORAGE_REFUGIO_CONFIG_KEY, JSON.stringify(updatedCfg));
+          } catch (e) {}
+          window.dispatchEvent(new CustomEvent('doghouse_historia_mes_updated', { detail: updatedCfg.historia_mes }));
+          return updatedCfg.historia_mes;
+        }
+      } catch (e) {
+        // Fallback a ShelterConfigService.update estándar
+      }
     }
-    return updated;
-  }
+
+    const currentCfg = await ShelterConfigService.get();
+    const updatedCfg = await ShelterConfigService.update({
+      historia_mes: { ...currentCfg.historia_mes, ...data },
+    });
+    return updatedCfg.historia_mes;
+  },
 };
 
 export const ContactoVoluntariadoService = {
   get(): ContactoVoluntariado {
-    try {
-      const stored = localStorage.getItem(STORAGE_CONTACTO_VOLUNTARIADO_KEY);
-      if (stored) {
-        return { ...INITIAL_CONTACTO_VOLUNTARIADO, ...JSON.parse(stored) };
-      }
-    } catch (e) {
-      console.error('Error loading ContactoVoluntariado from storage:', e);
-    }
-    return INITIAL_CONTACTO_VOLUNTARIADO;
+    return ShelterConfigService.getSync().contacto_voluntariado;
   },
 
-  update(data: Partial<ContactoVoluntariado>): ContactoVoluntariado {
-    const current = this.get();
-    const updated = { ...current, ...data };
-    try {
-      localStorage.setItem(STORAGE_CONTACTO_VOLUNTARIADO_KEY, JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('doghouse_contacto_voluntariado_updated', { detail: updated }));
-    } catch (e) {
-      console.error('Error saving ContactoVoluntariado to storage:', e);
-    }
-    return updated;
-  }
+  async update(data: Partial<ContactoVoluntariado>): Promise<ContactoVoluntariado> {
+    const currentCfg = await ShelterConfigService.get();
+    const updatedCfg = await ShelterConfigService.update({
+      contacto_voluntariado: { ...currentCfg.contacto_voluntariado, ...data },
+    });
+    return updatedCfg.contacto_voluntariado;
+  },
 };
 
 /**
@@ -539,7 +470,8 @@ export const DogService = {
 
         if (error) {
           console.warn('Supabase DogService.getAll warning:', error.message);
-        } else if (data && data.length > 0) {
+          return [];
+        } else if (data) {
           return data.map((d: any) => ({
             ...d,
             fotos: Array.isArray(d.fotos) && d.fotos.length > 0 ? d.fotos : [d.foto_url].filter(Boolean),
@@ -547,10 +479,10 @@ export const DogService = {
         }
       } catch (err) {
         console.error('Error fetching dogs from Supabase:', err);
+        return [];
       }
     }
-    // Si la tabla no está creada aún en Supabase o está vacía, devuelve los iniciales
-    return INITIAL_DOGS;
+    return [];
   },
 
   async getById(id: string): Promise<Perro | null> {
@@ -682,14 +614,16 @@ export const NeedsService = {
 
         if (error) {
           console.warn('Supabase NeedsService.getAll warning:', error.message);
-        } else if (data && data.length > 0) {
+          return [];
+        } else if (data) {
           return data;
         }
       } catch (err) {
         console.error('Error fetching needs from Supabase:', err);
+        return [];
       }
     }
-    return INITIAL_NEEDS;
+    return [];
   },
 
   async create(necesidad: Omit<InsumoNecesidad, 'id'>): Promise<InsumoNecesidad> {
@@ -869,14 +803,16 @@ export const EventsService = {
 
         if (error) {
           console.warn('Supabase EventsService.getAll warning:', error.message);
-        } else if (data && data.length > 0) {
+          return [];
+        } else if (data) {
           return data;
         }
       } catch (err) {
         console.error('Error fetching events from Supabase:', err);
+        return [];
       }
     }
-    return INITIAL_EVENTS;
+    return [];
   },
 
   async create(evento: Omit<EventoRefugio, 'id'>): Promise<EventoRefugio> {
@@ -964,14 +900,16 @@ export const LostDogsService = {
 
         if (error) {
           console.warn('Supabase LostDogsService.getAll warning:', error.message);
-        } else if (data && data.length > 0) {
+          return [];
+        } else if (data) {
           return data;
         }
       } catch (err) {
         console.error('Error fetching lost dogs from Supabase:', err);
+        return [];
       }
     }
-    return INITIAL_LOST_DOGS;
+    return [];
   },
 
   async create(reporte: Omit<PerroPerdidoReporte, 'id' | 'created_at'>): Promise<PerroPerdidoReporte> {
@@ -2278,16 +2216,6 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.verificar_admin(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.guardar_admin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) TO anon, authenticated;
-
--- Registro del Administrador Inicial
-SELECT public.guardar_admin(
-  'admin@refugiodoghouse.ec',
-  'DogHouseAdmin2026!',
-  'Administrador General DogHouse',
-  'Superadmin',
-  '0997948588',
-  'Director de Operaciones y Refugio'
-);
 `;
 
 export const CREATE_ADMIN_SQL_SCRIPT = `-- ============================================================================
@@ -2323,15 +2251,19 @@ DO $$
 DECLARE
   new_user_id UUID := gen_random_uuid();
   
-  -- >>> CONFIGURA AQUÍ LAS CREDENCIALES DEL ADMINISTRADOR <<<
-  admin_email TEXT := 'admin@refugiodoghouse.ec';
-  admin_password TEXT := 'DogHouseAdmin2026!';
-  admin_nombre TEXT := 'Administrador General DogHouse';
+  -- >>> INGRESA AQUÍ LAS CREDENCIALES DE TU ADMINISTRADOR ANTES DE EJECUTAR <<<
+  admin_email TEXT := 'tu_correo_aqui@ejemplo.com';
+  admin_password TEXT := 'TuContrasenaSegura2026!';
+  admin_nombre TEXT := 'Administrador DogHouse';
   admin_rol TEXT := 'Superadmin';
   admin_cargo TEXT := 'Director de Operaciones y Refugio';
-  admin_telefono TEXT := '0997948588';
+  admin_telefono TEXT := '0999999999';
   v_hash TEXT;
 BEGIN
+  IF admin_email = 'tu_correo_aqui@ejemplo.com' OR admin_password = 'TuContrasenaSegura2026!' THEN
+    RAISE EXCEPTION 'Por favor cambia admin_email y admin_password por tus credenciales reales antes de ejecutar este script.';
+  END IF;
+
   v_hash := crypt(admin_password, gen_salt('bf'));
 
   -- 1. Guardar en la tabla public.admins

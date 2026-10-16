@@ -25,6 +25,7 @@ import { FormularioAdopcion } from './FormularioAdopcion';
 interface AdopcionCatalogoProps {
   perros?: Perro[];
   dogs?: Perro[];
+  loading?: boolean;
   selectedDog?: Perro | null;
   onSelectDog?: (dog: Perro | null) => void;
   onAdoptDog?: (dog: Perro) => void;
@@ -75,6 +76,7 @@ export function getDogApproxAgeInMonths(edad: string): number {
 export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
   perros,
   dogs,
+  loading = false,
   selectedDog,
   onSelectDog,
   onAdoptDog,
@@ -521,7 +523,33 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
       </div>
 
       {/* Dogs Grid & Gallery View */}
-      {filteredDogs.length === 0 ? (
+      {loading ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-center gap-2 py-4 text-xs font-semibold text-stone-500">
+            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+            <span>Cargando catálogo de perritos en adopción desde la base de datos...</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div key={idx} className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs flex flex-col">
+                <div className="h-64 bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 animate-pulse relative" />
+                <div className="p-5 space-y-3 flex-1">
+                  <div className="flex justify-between items-center">
+                    <div className="h-6 w-32 bg-stone-200 rounded-md" />
+                    <div className="h-5 w-16 bg-stone-100 rounded-md" />
+                  </div>
+                  <div className="h-4 w-full bg-stone-100 rounded" />
+                  <div className="h-4 w-4/5 bg-stone-100 rounded" />
+                  <div className="pt-4 border-t border-stone-100 flex justify-between items-center">
+                    <div className="h-4 w-20 bg-stone-100 rounded" />
+                    <div className="h-8 w-24 bg-amber-100 rounded-xl" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : filteredDogs.length === 0 ? (
         <div className="bg-white rounded-3xl border border-stone-200 p-12 text-center max-w-md mx-auto space-y-4 shadow-xs">
           <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
             <Dog className="w-8 h-8" />

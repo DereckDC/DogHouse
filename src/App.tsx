@@ -26,11 +26,7 @@ import {
   DogService, 
   NeedsService, 
   EventsService, 
-  LostDogsService,
-  INITIAL_DOGS,
-  INITIAL_NEEDS,
-  INITIAL_EVENTS,
-  INITIAL_LOST_DOGS
+  LostDogsService
 } from './lib/supabase';
 import { MessageCircle, Heart, Phone } from 'lucide-react';
 import { SHELTER_PHONE_ECUADOR } from './lib/whatsapp';
@@ -78,11 +74,12 @@ export default function App() {
   // Estado del Toast
   const [toast, setToast] = useState<ToastNotification | null>(null);
 
-  // Estados de datos principales
-  const [dogs, setDogs] = useState<Perro[]>(INITIAL_DOGS);
-  const [needs, setNeeds] = useState<InsumoNecesidad[]>(INITIAL_NEEDS);
-  const [events, setEvents] = useState<EventoRefugio[]>(INITIAL_EVENTS);
-  const [lostDogs, setLostDogs] = useState<PerroPerdidoReporte[]>(INITIAL_LOST_DOGS);
+  // Estados de datos principales inicializados vacíos (cargados exclusivamente de Supabase)
+  const [dogs, setDogs] = useState<Perro[]>([]);
+  const [needs, setNeeds] = useState<InsumoNecesidad[]>([]);
+  const [events, setEvents] = useState<EventoRefugio[]>([]);
+  const [lostDogs, setLostDogs] = useState<PerroPerdidoReporte[]>([]);
+  const [loadingDogs, setLoadingDogs] = useState<boolean>(true);
 
   // Modal de Adopción
   const [selectedDogForAdoption, setSelectedDogForAdoption] = useState<Perro | null>(null);
@@ -110,6 +107,7 @@ export default function App() {
 
   // Cargar datos asíncronos de Supabase
   const refreshData = async () => {
+    setLoadingDogs(true);
     try {
       const [loadedDogs, loadedNeeds, loadedEvents, loadedLostDogs] = await Promise.all([
         DogService.getAll(),
@@ -124,6 +122,8 @@ export default function App() {
       setLostDogs(loadedLostDogs);
     } catch (err) {
       console.error('Error cargando datos de Supabase:', err);
+    } finally {
+      setLoadingDogs(false);
     }
   };
 
@@ -183,6 +183,7 @@ export default function App() {
           <Home
             dogs={dogs}
             needs={needs}
+            loading={loadingDogs}
             onNavigate={handleNavigate}
             onAdoptDog={handleOpenAdoptionModal}
           />
@@ -191,6 +192,7 @@ export default function App() {
         {activeSection === 'adopcion' && (
           <AdopcionCatalogo
             dogs={dogs}
+            loading={loadingDogs}
             onAdoptDog={handleOpenAdoptionModal}
             onShowToast={showToast}
           />

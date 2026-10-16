@@ -136,6 +136,24 @@ export interface AdminUser {
   updated_at?: string;
 }
 
+export interface CuentaBancaria {
+  banco: string;
+  tipo: string;
+  numero: string;
+  titular: string;
+  identificacion: string;
+  email: string;
+  color?: string;
+  tag?: string;
+}
+
+export interface RedesSociales {
+  instagram: string;
+  facebook: string;
+  tiktok: string;
+  paypal: string;
+}
+
 export interface HistoriaMes {
   titulo: string;
   subtitulo?: string;
@@ -154,4 +172,20 @@ export interface ContactoVoluntariado {
   horarios_dias?: string;
   horarios_horas?: string;
   horarios_detalle?: string;
+}
+
+export interface RefugioConfig {
+  id?: string;
+  nombre: string;
+  telefono: string;
+  telefono_display: string;
+  email: string;
+  ubicacion: string;
+  horarios: string;
+  politica_entrega: string;
+  redes: RedesSociales;
+  cuentas_bancarias: CuentaBancaria[];
+  historia_mes: HistoriaMes;
+  contacto_voluntariado: ContactoVoluntariado;
+  updated_at?: string;
 }

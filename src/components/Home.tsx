@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Perro, InsumoNecesidad, HistoriaMes } from '../types';
 import { DOGHOUSE_LOGO_URL } from './Navbar';
-import { HistoriaMesService, INITIAL_HISTORIA_MES } from '../lib/supabase';
+import { HistoriaMesService } from '../lib/supabase';
 
 interface HomeProps {
   onNavigate: (section: string) => void;
@@ -22,6 +22,7 @@ interface HomeProps {
   urgentDogs?: Perro[];
   needs?: InsumoNecesidad[];
   historiaMes?: HistoriaMes;
+  loading?: boolean;
   onAdoptDog?: (dog: Perro) => void;
   onSelectDog?: (dog: Perro) => void;
 }
@@ -32,11 +33,12 @@ export const Home: React.FC<HomeProps> = ({
   urgentDogs, 
   needs = [], 
   historiaMes: propHistoria,
+  loading = false,
   onAdoptDog, 
   onSelectDog 
 }) => {
   const [currentHistoria, setCurrentHistoria] = useState<HistoriaMes>(
-    propHistoria || HistoriaMesService.get() || INITIAL_HISTORIA_MES
+    propHistoria || HistoriaMesService.get()
   );
 
   useEffect(() => {
@@ -237,87 +239,133 @@ export const Home: React.FC<HomeProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedDogs.slice(0, 3).map((dog) => {
-            const personalityTraits = Array.isArray(dog.personalidad) 
-              ? dog.personalidad 
-              : typeof dog.personalidad === 'string' 
-              ? (dog.personalidad as string).split(',').map((s) => s.trim()) 
-              : [];
-
-            return (
-              <div 
-                key={dog.id}
+        {loading ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-center gap-2 py-2 text-xs font-semibold text-stone-500">
+              <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+              <span>Cargando perritos del refugio...</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs flex flex-col">
+                  <div className="h-60 bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 animate-pulse relative" />
+                  <div className="p-5 space-y-3 flex-1">
+                    <div className="flex justify-between items-center">
+                      <div className="h-6 w-32 bg-stone-200 rounded-md" />
+                      <div className="h-5 w-16 bg-stone-100 rounded-md" />
+                    </div>
+                    <div className="h-4 w-full bg-stone-100 rounded" />
+                    <div className="h-4 w-4/5 bg-stone-100 rounded" />
+                    <div className="pt-3 border-t border-stone-100 flex justify-between items-center">
+                      <div className="h-4 w-20 bg-stone-100 rounded" />
+                      <div className="h-8 w-28 bg-amber-200/60 rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : displayedDogs.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-stone-200 p-8 sm:p-12 text-center max-w-xl mx-auto space-y-3 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <Dog className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">Nuestros peluditos están en proceso de adopción</h3>
+            <p className="text-xs sm:text-sm text-stone-500 leading-relaxed max-w-md mx-auto">
+              Actualmente los perritos se encuentran recibiendo atención o con familias adoptivas en adaptación. ¡Pronto presentaremos nuevos ingresos!
+            </p>
+            <div className="pt-2">
+              <button
                 onClick={() => onNavigate('adopcion')}
-                className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs"
               >
-                <div className="relative h-60 overflow-hidden bg-stone-100">
-                  <img
-                    src={dog.foto_url}
-                    alt={dog.nombre}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                    {dog.urgente && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-xs">
-                        Adopción Urgente
-                      </span>
-                    )}
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/90 backdrop-blur-sm text-stone-800">
-                      {dog.tamanio}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 right-3">
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-900/80 backdrop-blur-sm text-white">
-                      {dog.edad}
-                    </span>
-                  </div>
-                </div>
+                Ver Catálogo de Adopciones
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayedDogs.slice(0, 3).map((dog) => {
+              const personalityTraits = Array.isArray(dog.personalidad) 
+                ? dog.personalidad 
+                : typeof dog.personalidad === 'string' 
+                ? (dog.personalidad as string).split(',').map((s) => s.trim()) 
+                : [];
 
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold text-stone-900 group-hover:text-amber-600 transition-colors">{dog.nombre}</h3>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-600">
-                        {dog.genero}
+              return (
+                <div 
+                  key={dog.id}
+                  onClick={() => onNavigate('adopcion')}
+                  className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
+                >
+                  <div className="relative h-60 overflow-hidden bg-stone-100">
+                    <img
+                      src={dog.foto_url}
+                      alt={dog.nombre}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                      {dog.urgente && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-xs">
+                          Adopción Urgente
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/90 backdrop-blur-sm text-stone-800">
+                        {dog.tamanio}
                       </span>
                     </div>
-                    <p className="text-xs text-stone-500 mt-2 line-clamp-2 leading-relaxed">
-                      {dog.descripcion}
-                    </p>
+                    <div className="absolute bottom-3 right-3">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-900/80 backdrop-blur-sm text-white">
+                        {dog.edad}
+                      </span>
+                    </div>
+                  </div>
 
-                    {personalityTraits.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {personalityTraits.map((trait, idx) => (
-                          <span key={idx} className="text-[11px] px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium">
-                            {trait}
-                          </span>
-                        ))}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-stone-900 group-hover:text-amber-600 transition-colors">{dog.nombre}</h3>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-600">
+                          {dog.genero}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      <p className="text-xs text-stone-500 mt-2 line-clamp-2 leading-relaxed">
+                        {dog.descripcion}
+                      </p>
 
-                  <div className="pt-5 border-t border-stone-100 mt-4 flex items-center justify-between gap-3">
-                    <div className="text-[11px] text-stone-500 space-y-0.5">
-                      <div>Vacunas: <span className="font-semibold text-emerald-600">{dog.vacunas ? 'Sí' : 'No'}</span></div>
-                      <div>Esterilizado: <span className="font-semibold text-emerald-600">{dog.esterilizado ? 'Sí' : 'No'}</span></div>
+                      {personalityTraits.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-3">
+                          {personalityTraits.map((trait, idx) => (
+                            <span key={idx} className="text-[11px] px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium">
+                              {trait}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onNavigate('adopcion');
-                      }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs"
-                    >
-                      Ver Galería
-                    </button>
+
+                    <div className="pt-5 border-t border-stone-100 mt-4 flex items-center justify-between gap-3">
+                      <div className="text-[11px] text-stone-500 space-y-0.5">
+                        <div>Vacunas: <span className="font-semibold text-emerald-600">{dog.vacunas ? 'Sí' : 'No'}</span></div>
+                        <div>Esterilizado: <span className="font-semibold text-emerald-600">{dog.esterilizado ? 'Sí' : 'No'}</span></div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdoptClick(dog);
+                        }}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs"
+                      >
+                        Ver Galería
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Shelter Mission & Values */}

@@ -10,11 +10,12 @@ import {
   MapPin, 
   Phone,
   Sparkles,
-  Award
+  Award,
+  RefreshCw
 } from 'lucide-react';
 import { Perro, InsumoNecesidad, HistoriaMes } from '../types';
 import { DOGHOUSE_LOGO_URL } from './Navbar';
-import { HistoriaMesService } from '../lib/supabase';
+import { HistoriaMesService, ShelterConfigService } from '../lib/supabase';
 
 interface HomeProps {
   onNavigate: (section: string) => void;
@@ -23,6 +24,8 @@ interface HomeProps {
   needs?: InsumoNecesidad[];
   historiaMes?: HistoriaMes;
   loading?: boolean;
+  loadingHistoria?: boolean;
+  onRefreshDogs?: () => void;
   onAdoptDog?: (dog: Perro) => void;
   onSelectDog?: (dog: Perro) => void;
 }
@@ -34,21 +37,53 @@ export const Home: React.FC<HomeProps> = ({
   needs = [], 
   historiaMes: propHistoria,
   loading = false,
+  loadingHistoria = false,
+  onRefreshDogs,
   onAdoptDog, 
   onSelectDog 
 }) => {
-  const [currentHistoria, setCurrentHistoria] = useState<HistoriaMes>(
-    propHistoria || HistoriaMesService.get()
-  );
+  const [currentHistoria, setCurrentHistoria] = useState<HistoriaMes | null>(propHistoria || null);
+  const [loadingHistoriaState, setLoadingHistoriaState] = useState<boolean>(!propHistoria);
 
+  // Sincronizar inmediatamente cuando App.tsx obtenga la información de Supabase
   useEffect(() => {
+    if (propHistoria) {
+      setCurrentHistoria(propHistoria);
+      setLoadingHistoriaState(false);
+    }
+  }, [propHistoria]);
+
+  // Consultar directamente a la base de datos de Supabase para reflejar los cambios en tiempo real
+  useEffect(() => {
+    let isMounted = true;
+    const fetchFreshConfig = async () => {
+      try {
+        const cfg = await ShelterConfigService.get();
+        if (isMounted && cfg?.historia_mes) {
+          setCurrentHistoria(cfg.historia_mes);
+        }
+      } catch (err) {
+        console.error('Error obteniendo configuración del refugio en Home:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingHistoriaState(false);
+        }
+      }
+    };
+
+    fetchFreshConfig();
+
     const handleUpdate = (e: any) => {
-      if (e.detail) {
+      if (e.detail && isMounted) {
         setCurrentHistoria(e.detail);
+        setLoadingHistoriaState(false);
       }
     };
     window.addEventListener('doghouse_historia_mes_updated', handleUpdate);
-    return () => window.removeEventListener('doghouse_historia_mes_updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('doghouse_historia_mes_updated', handleUpdate);
+    };
   }, []);
 
   // Obtener lista prioritaria de adopción
@@ -136,45 +171,77 @@ export const Home: React.FC<HomeProps> = ({
               <div className="absolute -bottom-4 -right-4 w-72 h-72 bg-emerald-200/40 rounded-full blur-3xl -z-10" />
 
               <div className="bg-white p-3 rounded-2xl shadow-xl border border-stone-200/80 overflow-hidden">
-                <div className="relative h-80 sm:h-96 rounded-xl overflow-hidden group">
-                  <img
-                    src={currentHistoria.foto_url}
-                    alt={currentHistoria.titulo || "Perritos felices en DogHouse"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-xs font-bold uppercase tracking-wider">
-                        {currentHistoria.titulo || "Historia del Mes"}
-                      </span>
-                      {currentHistoria.subtitulo && (
-                        <span className="text-xs text-stone-300">{currentHistoria.subtitulo}</span>
+                {(loadingHistoria || loadingHistoriaState || !currentHistoria) ? (
+                  <div className="h-80 sm:h-96 rounded-xl bg-stone-100 animate-pulse flex flex-col justify-end p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-5 w-24 bg-stone-200 rounded-md" />
+                      <div className="h-4 w-32 bg-stone-200 rounded" />
+                    </div>
+                    <div className="h-6 w-3/4 bg-stone-200 rounded mb-2" />
+                    <div className="h-5 w-1/2 bg-stone-200 rounded" />
+                  </div>
+                ) : (
+                  <div className="relative h-80 sm:h-96 rounded-xl overflow-hidden group">
+                    {currentHistoria.foto_url ? (
+                      <img
+                        src={currentHistoria.foto_url}
+                        alt={currentHistoria.titulo || ''}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-stone-800 via-stone-900 to-amber-950 flex flex-col items-center justify-center p-6 text-center">
+                        <Dog className="w-16 h-16 text-amber-400/30 mb-2" />
+                        <p className="text-xs text-stone-400">DogHouse Refugio</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/40 to-transparent flex flex-col justify-end p-5 text-white">
+                      <div className="flex items-center gap-2">
+                        {currentHistoria.titulo && (
+                          <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-xs font-bold uppercase tracking-wider">
+                            {currentHistoria.titulo}
+                          </span>
+                        )}
+                        {currentHistoria.subtitulo && (
+                          <span className="text-xs text-stone-300">{currentHistoria.subtitulo}</span>
+                        )}
+                      </div>
+                      {currentHistoria.frase && (
+                        <h3 className="text-xl font-bold mt-1.5 text-white leading-snug">
+                          {currentHistoria.frase}
+                        </h3>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold mt-1 text-white leading-snug">
-                      {currentHistoria.frase}
-                    </h3>
                   </div>
-                </div>
+                )}
 
                 {/* Floating badge */}
-                <div className="mt-3 bg-amber-50 rounded-xl p-3 flex items-center justify-between border border-amber-200">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
-                      <Heart className="w-4 h-4 fill-white" />
+                {(currentHistoria?.perros_cuidados_texto || currentHistoria?.perros_cuidados_subtexto) && (
+                  <div className="mt-3 bg-amber-50 rounded-xl p-3 flex items-center justify-between border border-amber-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
+                        <Heart className="w-4 h-4 fill-white" />
+                      </div>
+                      <div>
+                        {currentHistoria.perros_cuidados_texto && (
+                          <p className="text-xs font-bold text-stone-900">
+                            {currentHistoria.perros_cuidados_texto}
+                          </p>
+                        )}
+                        {currentHistoria.perros_cuidados_subtexto && (
+                          <p className="text-[11px] text-stone-500">
+                            {currentHistoria.perros_cuidados_subtexto}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-stone-900">{currentHistoria.perros_cuidados_texto || "45 Perros bajo nuestro cuidado"}</p>
-                      <p className="text-[11px] text-stone-500">{currentHistoria.perros_cuidados_subtexto || "Alimentados, cuidados y amados a diario"}</p>
-                    </div>
+                    <button 
+                      onClick={() => onNavigate('adopcion')}
+                      className="text-xs font-bold text-amber-700 hover:text-amber-800 underline"
+                    >
+                      Conócelos
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => onNavigate('adopcion')}
-                    className="text-xs font-bold text-amber-700 hover:text-amber-800 underline"
-                  >
-                    Conócelos
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -189,7 +256,7 @@ export const Home: React.FC<HomeProps> = ({
             <div className="w-12 h-12 mx-auto rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3">
               <Dog className="w-6 h-6" />
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">450+</div>
+            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">250+</div>
             <p className="text-xs sm:text-sm font-semibold text-stone-600 mt-1">Perros Rescatados</p>
           </div>
 
@@ -197,7 +264,7 @@ export const Home: React.FC<HomeProps> = ({
             <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
               <Heart className="w-6 h-6" />
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">380+</div>
+            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">200+</div>
             <p className="text-xs sm:text-sm font-semibold text-stone-600 mt-1">Adopciones Felices</p>
           </div>
 
@@ -213,7 +280,7 @@ export const Home: React.FC<HomeProps> = ({
             <div className="w-12 h-12 mx-auto rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-3">
               <Users className="w-6 h-6" />
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">85+</div>
+            <div className="text-3xl sm:text-4xl font-black text-stone-900 font-serif">20+</div>
             <p className="text-xs sm:text-sm font-semibold text-stone-600 mt-1">Voluntarios Activos</p>
           </div>
         </div>
@@ -274,7 +341,16 @@ export const Home: React.FC<HomeProps> = ({
             <p className="text-xs sm:text-sm text-stone-500 leading-relaxed max-w-md mx-auto">
               Actualmente los perritos se encuentran recibiendo atención o con familias adoptivas en adaptación. ¡Pronto presentaremos nuevos ingresos!
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              {onRefreshDogs && (
+                <button
+                  onClick={onRefreshDogs}
+                  className="px-4 py-2.5 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-700 text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Reintentar conexión</span>
+                </button>
+              )}
               <button
                 onClick={() => onNavigate('adopcion')}
                 className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs"

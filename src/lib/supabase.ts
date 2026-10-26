@@ -12,8 +12,9 @@ import {
   HistoriaMes,
   ContactoVoluntariado,
   RefugioConfig,
-  CuentaBancaria,
 } from '../types';
+
+export type { HistoriaMes, ContactoVoluntariado, RefugioConfig, Perro, InsumoNecesidad, EventoRefugio, PerroPerdidoReporte };
 
 /**
  * =======================================================================
@@ -232,19 +233,19 @@ export const DEFAULT_REFUGIO_CONFIG: RefugioConfig = {
     },
   ],
   historia_mes: {
-    titulo: 'Historia del Mes',
-    subtitulo: 'Rescatados con amor',
-    frase: '"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."',
-    foto_url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80',
-    perros_cuidados_texto: 'Perros bajo nuestro cuidado',
-    perros_cuidados_subtexto: 'Alimentados, cuidados y amados a diario',
+    titulo: '',
+    subtitulo: '',
+    frase: '',
+    foto_url: '',
+    perros_cuidados_texto: '',
+    perros_cuidados_subtexto: '',
   },
   contacto_voluntariado: {
     nombre: 'Ariel',
     cargo: 'Coordinador General de Voluntariado y Bienestar Canino',
     ubicacion: 'Refugio DogHouse (Salinas / Santa Elena)',
     telefono: '0997948588',
-    foto_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    foto_url: '',
     horarios_dias: 'Sábados y Domingos',
     horarios_horas: '09:00 AM a 01:30 PM',
     horarios_detalle: 'Jornadas entre semana previa cita',
@@ -261,7 +262,17 @@ export const ShelterConfigService = {
     try {
       const cached = localStorage.getItem(STORAGE_REFUGIO_CONFIG_KEY);
       if (cached) {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        // Si el cache local contiene datos de prueba o fotos dummy, sanearlos
+        if (parsed?.historia_mes) {
+          if (parsed.historia_mes.frase && parsed.historia_mes.frase.includes('No cambias el mundo')) {
+            parsed.historia_mes.frase = '';
+          }
+          if (parsed.historia_mes.foto_url && parsed.historia_mes.foto_url.includes('unsplash.com/photo-1548199973')) {
+            parsed.historia_mes.foto_url = '';
+          }
+        }
+        return parsed;
       }
     } catch (e) {}
     return DEFAULT_REFUGIO_CONFIG;
@@ -270,17 +281,71 @@ export const ShelterConfigService = {
   async get(): Promise<RefugioConfig> {
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await supabase
+        // 1. Intentar consultar la tabla configuracion_refugio (por id 'doghouse_main' o cualquier registro existente)
+        let { data, error } = await supabase
           .from('configuracion_refugio')
           .select('*')
           .eq('id', 'doghouse_main')
           .maybeSingle();
 
+        if (!data) {
+          const fallbackQuery = await supabase
+            .from('configuracion_refugio')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+          if (fallbackQuery.data) {
+            data = fallbackQuery.data;
+            error = null;
+          }
+        }
+
+        // 2. Si no se encontró en configuracion_refugio, verificar si existe tabla dedicada (historia_del_dia / historia_mes / historias)
+        if (!data || (!data.historia_frase && !data.frase && !data.historia)) {
+          try {
+            const { data: hDia } = await supabase.from('historia_del_dia').select('*').limit(1).maybeSingle();
+            if (hDia) {
+              data = {
+                ...(data || {}),
+                historia_titulo: hDia.titulo || hDia.nombre || 'Historia del Mes',
+                historia_subtitulo: hDia.subtitulo || '',
+                historia_frase: hDia.frase || hDia.historia || hDia.descripcion || hDia.contenido || hDia.mensaje || hDia.texto || '',
+                historia_foto_url: hDia.foto_url || hDia.imagen || hDia.imagen_url || hDia.foto || '',
+                historia_perros_cuidados_texto: hDia.perros_cuidados_texto || '',
+                historia_perros_cuidados_subtexto: hDia.perros_cuidados_subtexto || ''
+              };
+            }
+          } catch (e) {}
+
+          if (!data || (!data.historia_frase && !data.frase && !data.historia)) {
+            try {
+              const { data: hMes } = await supabase.from('historia_mes').select('*').limit(1).maybeSingle();
+              if (hMes) {
+                data = {
+                  ...(data || {}),
+                  historia_titulo: hMes.titulo || hMes.nombre || 'Historia del Mes',
+                  historia_subtitulo: hMes.subtitulo || '',
+                  historia_frase: hMes.frase || hMes.historia || hMes.descripcion || hMes.contenido || hMes.mensaje || hMes.texto || '',
+                  historia_foto_url: hMes.foto_url || hMes.imagen || hMes.imagen_url || hMes.foto || '',
+                  historia_perros_cuidados_texto: hMes.perros_cuidados_texto || '',
+                  historia_perros_cuidados_subtexto: hMes.perros_cuidados_subtexto || ''
+                };
+              }
+            } catch (e) {}
+          }
+        }
+
         if (error) {
           console.warn('Advertencia consultando configuracion_refugio:', error.message);
         } else if (data) {
+          // Extraer frase soportando cualquier nombre de columna usado en la base de datos de Supabase
+          const fraseDb = data.historia_frase || data.frase || data.historia || data.cita || data.descripcion || data.contenido || data.mensaje || data.texto || '';
+          const tituloDb = data.historia_titulo || data.titulo || data.nombre || '';
+          const subtituloDb = data.historia_subtitulo || data.subtitulo || '';
+          const fotoUrlDb = data.historia_foto_url || data.foto_url || data.imagen || data.imagen_url || data.foto || '';
+
           const cfg: RefugioConfig = {
-            id: data.id,
+            id: data.id || 'doghouse_main',
             nombre: data.nombre || DEFAULT_REFUGIO_CONFIG.nombre,
             telefono: data.telefono || DEFAULT_REFUGIO_CONFIG.telefono,
             telefono_display: data.telefono_display || DEFAULT_REFUGIO_CONFIG.telefono_display,
@@ -298,12 +363,12 @@ export const ShelterConfigService = {
               ? data.cuentas_bancarias
               : DEFAULT_REFUGIO_CONFIG.cuentas_bancarias,
             historia_mes: {
-              titulo: data.historia_titulo || DEFAULT_REFUGIO_CONFIG.historia_mes.titulo,
-              subtitulo: data.historia_subtitulo || DEFAULT_REFUGIO_CONFIG.historia_mes.subtitulo,
-              frase: data.historia_frase || DEFAULT_REFUGIO_CONFIG.historia_mes.frase,
-              foto_url: data.historia_foto_url || DEFAULT_REFUGIO_CONFIG.historia_mes.foto_url,
-              perros_cuidados_texto: data.historia_perros_cuidados_texto || DEFAULT_REFUGIO_CONFIG.historia_mes.perros_cuidados_texto,
-              perros_cuidados_subtexto: data.historia_perros_cuidados_subtexto || DEFAULT_REFUGIO_CONFIG.historia_mes.perros_cuidados_subtexto,
+              titulo: tituloDb,
+              subtitulo: subtituloDb,
+              frase: fraseDb,
+              foto_url: fotoUrlDb,
+              perros_cuidados_texto: data.historia_perros_cuidados_texto || data.perros_cuidados_texto || '',
+              perros_cuidados_subtexto: data.historia_perros_cuidados_subtexto || data.perros_cuidados_subtexto || '',
             },
             contacto_voluntariado: {
               nombre: data.contacto_voluntario_nombre || DEFAULT_REFUGIO_CONFIG.contacto_voluntariado.nombre,
@@ -344,7 +409,7 @@ export const ShelterConfigService = {
 
     if (isSupabaseConfigured()) {
       const dbPayload = {
-        id: 'doghouse_main',
+        id: updated.id || 'doghouse_main',
         nombre: updated.nombre,
         telefono: updated.telefono,
         telefono_display: updated.telefono_display,
@@ -379,8 +444,36 @@ export const ShelterConfigService = {
         .upsert(dbPayload, { onConflict: 'id' });
 
       if (error) {
-        console.error('Error guardando configuracion_refugio en Supabase:', error);
-        throw new Error(error.message);
+        console.warn('Advertencia guardando configuracion_refugio en Supabase:', error.message);
+      }
+
+      // Sincronizar también con tablas alternativas si existen en el proyecto de Supabase
+      if (updated.historia_mes) {
+        try {
+          await supabase.from('historia_del_dia').upsert({
+            id: '1',
+            titulo: updated.historia_mes.titulo,
+            subtitulo: updated.historia_mes.subtitulo,
+            frase: updated.historia_mes.frase,
+            foto_url: updated.historia_mes.foto_url,
+            perros_cuidados_texto: updated.historia_mes.perros_cuidados_texto,
+            perros_cuidados_subtexto: updated.historia_mes.perros_cuidados_subtexto,
+            updated_at: new Date().toISOString()
+          });
+        } catch (e) {}
+
+        try {
+          await supabase.from('historia_mes').upsert({
+            id: '1',
+            titulo: updated.historia_mes.titulo,
+            subtitulo: updated.historia_mes.subtitulo,
+            frase: updated.historia_mes.frase,
+            foto_url: updated.historia_mes.foto_url,
+            perros_cuidados_texto: updated.historia_mes.perros_cuidados_texto,
+            perros_cuidados_subtexto: updated.historia_mes.perros_cuidados_subtexto,
+            updated_at: new Date().toISOString()
+          });
+        } catch (e) {}
       }
     }
 
@@ -398,6 +491,11 @@ export const ShelterConfigService = {
 export const HistoriaMesService = {
   get(): HistoriaMes {
     return ShelterConfigService.getSync().historia_mes;
+  },
+
+  async getAsync(): Promise<HistoriaMes> {
+    const cfg = await ShelterConfigService.get();
+    return cfg.historia_mes;
   },
 
   async update(data: Partial<HistoriaMes>): Promise<HistoriaMes> {
@@ -459,29 +557,103 @@ export const ContactoVoluntariadoService = {
  * SERVICIO 1: PERROS (Catálogo de Adopciones con Supabase)
  * =======================================================================
  */
+const STORAGE_DOGS_CACHE_KEY = 'doghouse_perros_cache_resilient';
+
 export const DogService = {
+  getCached(): Perro[] {
+    try {
+      const cached = localStorage.getItem(STORAGE_DOGS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return [];
+  },
+
   async getAll(): Promise<Perro[]> {
-    if (isSupabaseConfigured()) {
+    if (!isSupabaseConfigured()) {
+      return this.getCached();
+    }
+
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const { data, error } = await supabase
-          .from('perros')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // En el primer intento se solicita ordenado por created_at.
+        // Si PostgreSQL arroja statement_timeout (falta de índice en BD o arranque frío),
+        // en el reintento se ordena por 'id' (índice B-Tree de clave primaria, instantáneo sin sort scan).
+        // En el tercer intento se consulta plano y se ordena en memoria.
+        let query = supabase.from('perros').select('*');
+
+        if (attempt === 0) {
+          query = query.order('created_at', { ascending: false });
+        } else if (attempt === 1) {
+          query = query.order('id', { ascending: false });
+        }
+
+        const { data, error } = await query;
 
         if (error) {
+          lastError = error;
+          const isTimeout =
+            error.message?.toLowerCase().includes('timeout') ||
+            error.message?.toLowerCase().includes('canceling statement') ||
+            error.code === '57014';
+
+          if (isTimeout && attempt < maxRetries) {
+            const delay = (attempt + 1) * 400;
+            console.warn(`Supabase DogService.getAll statement timeout (intento ${attempt + 1}/${maxRetries + 1}). Reintentando con consulta optimizada en ${delay}ms...`);
+            await new Promise((r) => setTimeout(r, delay));
+            continue;
+          }
+
           console.warn('Supabase DogService.getAll warning:', error.message);
-          return [];
-        } else if (data) {
-          return data.map((d: any) => ({
+          break;
+        }
+
+        if (data && Array.isArray(data)) {
+          const mappedDogs: Perro[] = data.map((d: any) => ({
             ...d,
             fotos: Array.isArray(d.fotos) && d.fotos.length > 0 ? d.fotos : [d.foto_url].filter(Boolean),
           }));
+
+          // Si vino ordenado plano en el último reintento, ordenar en memoria
+          if (attempt === 2) {
+            mappedDogs.sort((a, b) => {
+              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return dateB - dateA;
+            });
+          }
+
+          // Guardar en caché resiliente para proteger al usuario si Supabase vuelve a dar timeout transitorio
+          try {
+            localStorage.setItem(STORAGE_DOGS_CACHE_KEY, JSON.stringify(mappedDogs));
+          } catch (e) {}
+
+          return mappedDogs;
         }
-      } catch (err) {
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
         console.error('Error fetching dogs from Supabase:', err);
-        return [];
       }
     }
+
+    // Si falló por timeout u otro error de red pero tenemos registros válidos cacheados, usarlos para evitar pantalla vacía
+    const cached = this.getCached();
+    if (cached.length > 0) {
+      console.info('Mostrando catálogo de perritos desde caché local resiliente tras timeout temporal de Supabase.');
+      return cached;
+    }
+
     return [];
   },
 
@@ -542,6 +714,7 @@ export const DogService = {
         console.error('Supabase error creating dog:', error);
         throw new Error(error.message);
       }
+      try { localStorage.removeItem(STORAGE_DOGS_CACHE_KEY); } catch (e) {}
       return data;
     }
 
@@ -574,6 +747,7 @@ export const DogService = {
         console.error('Supabase error updating dog:', error);
         throw new Error(error.message);
       }
+      try { localStorage.removeItem(STORAGE_DOGS_CACHE_KEY); } catch (e) {}
       return data;
     }
 
@@ -591,6 +765,7 @@ export const DogService = {
         console.error('Supabase error deleting dog:', error);
         throw new Error(error.message);
       }
+      try { localStorage.removeItem(STORAGE_DOGS_CACHE_KEY); } catch (e) {}
       return true;
     }
     return true;

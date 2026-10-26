@@ -20,13 +20,15 @@ import {
   Perro, 
   InsumoNecesidad, 
   EventoRefugio, 
-  PerroPerdidoReporte 
+  PerroPerdidoReporte,
+  HistoriaMes
 } from './types';
 import { 
   DogService, 
   NeedsService, 
   EventsService, 
-  LostDogsService
+  LostDogsService,
+  ShelterConfigService
 } from './lib/supabase';
 import { MessageCircle, Heart, Phone } from 'lucide-react';
 import { SHELTER_PHONE_ECUADOR } from './lib/whatsapp';
@@ -74,12 +76,14 @@ export default function App() {
   // Estado del Toast
   const [toast, setToast] = useState<ToastNotification | null>(null);
 
-  // Estados de datos principales inicializados vacíos (cargados exclusivamente de Supabase)
-  const [dogs, setDogs] = useState<Perro[]>([]);
+  // Estados de datos principales (inicializados con caché resiliente si existe)
+  const [dogs, setDogs] = useState<Perro[]>(() => DogService.getCached());
   const [needs, setNeeds] = useState<InsumoNecesidad[]>([]);
   const [events, setEvents] = useState<EventoRefugio[]>([]);
   const [lostDogs, setLostDogs] = useState<PerroPerdidoReporte[]>([]);
-  const [loadingDogs, setLoadingDogs] = useState<boolean>(true);
+  const [historiaMes, setHistoriaMes] = useState<HistoriaMes | null>(null);
+  const [loadingDogs, setLoadingDogs] = useState<boolean>(() => DogService.getCached().length === 0);
+  const [loadingConfig, setLoadingConfig] = useState<boolean>(true);
 
   // Modal de Adopción
   const [selectedDogForAdoption, setSelectedDogForAdoption] = useState<Perro | null>(null);
@@ -105,25 +109,47 @@ export default function App() {
     };
   }, [activeSection]);
 
-  // Cargar datos asíncronos de Supabase
-  const refreshData = async () => {
-    setLoadingDogs(true);
+  // Cargar catálogo de perritos de forma prioritaria para evitar cuellos de botella
+  const refreshDogs = async () => {
+    if (dogs.length === 0) {
+      setLoadingDogs(true);
+    }
     try {
-      const [loadedDogs, loadedNeeds, loadedEvents, loadedLostDogs] = await Promise.all([
-        DogService.getAll(),
+      const loadedDogs = await DogService.getAll();
+      if (loadedDogs && loadedDogs.length > 0) {
+        setDogs(loadedDogs);
+      }
+    } catch (err) {
+      console.error('Error cargando catálogo de perros de Supabase:', err);
+    } finally {
+      setLoadingDogs(false);
+    }
+  };
+
+  // Cargar datos asíncronos directamente desde Supabase
+  const refreshData = async () => {
+    // Iniciar carga de perritos inmediatamente
+    refreshDogs();
+
+    setLoadingConfig(true);
+    try {
+      const [loadedNeeds, loadedEvents, loadedLostDogs, loadedConfig] = await Promise.all([
         NeedsService.getAll(),
         EventsService.getAll(),
         LostDogsService.getAll(),
+        ShelterConfigService.get(),
       ]);
 
-      setDogs(loadedDogs);
       setNeeds(loadedNeeds);
       setEvents(loadedEvents);
       setLostDogs(loadedLostDogs);
+      if (loadedConfig?.historia_mes) {
+        setHistoriaMes(loadedConfig.historia_mes);
+      }
     } catch (err) {
       console.error('Error cargando datos de Supabase:', err);
     } finally {
-      setLoadingDogs(false);
+      setLoadingConfig(false);
     }
   };
 
@@ -184,8 +210,11 @@ export default function App() {
             dogs={dogs}
             needs={needs}
             loading={loadingDogs}
+            historiaMes={historiaMes || undefined}
+            loadingHistoria={loadingConfig}
             onNavigate={handleNavigate}
             onAdoptDog={handleOpenAdoptionModal}
+            onRefreshDogs={refreshDogs}
           />
         )}
 

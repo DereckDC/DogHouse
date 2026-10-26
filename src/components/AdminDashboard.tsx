@@ -1379,7 +1379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     required
                     value={historiaMes.frase}
                     onChange={(e) => setHistoriaMes({ ...historiaMes, frase: e.target.value })}
-                    placeholder='"No cambias el mundo adoptando un perro, pero para ese perro su mundo cambiará por siempre."'
+                    placeholder="Ingresa la frase inspiradora o historia destacada para la portada..."
                     className="w-full p-3 rounded-xl border border-stone-300 outline-none focus:ring-2 focus:ring-amber-500 text-xs leading-relaxed"
                   />
                   <p className="text-[11px] text-stone-400 mt-1">
@@ -1437,41 +1437,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white p-3 rounded-2xl shadow-md border border-stone-200/80 overflow-hidden">
                 <div className="relative h-80 rounded-xl overflow-hidden group">
-                  <img
-                    src={historiaMes.foto_url || 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'}
-                    alt="Vista previa historia del mes"
-                    className="w-full h-full object-cover"
-                  />
+                  {historiaMes.foto_url ? (
+                    <img
+                      src={historiaMes.foto_url}
+                      alt="Vista previa historia del mes"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-stone-900 flex flex-col items-center justify-center p-6 text-center text-stone-400">
+                      <Camera className="w-10 h-10 text-stone-500 mb-2" />
+                      <p className="text-xs font-semibold">Sin foto configurada en base de datos</p>
+                      <p className="text-[10px] text-stone-500 mt-1">Sube una foto o ingresa una URL arriba</p>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wider">
-                        {historiaMes.titulo || 'Historia del Mes'}
-                      </span>
+                      {historiaMes.titulo && (
+                        <span className="px-2.5 py-1 rounded-md bg-amber-500 text-white text-[11px] font-bold uppercase tracking-wider">
+                          {historiaMes.titulo}
+                        </span>
+                      )}
                       {historiaMes.subtitulo && (
                         <span className="text-xs text-stone-300">{historiaMes.subtitulo}</span>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold mt-1.5 text-white leading-snug line-clamp-3">
-                      {historiaMes.frase}
-                    </h3>
+                    {historiaMes.frase && (
+                      <h3 className="text-lg font-bold mt-1.5 text-white leading-snug line-clamp-3">
+                        {historiaMes.frase}
+                      </h3>
+                    )}
                   </div>
                 </div>
 
                 {/* Floating badge preview */}
-                <div className="mt-3 bg-amber-50 rounded-xl p-3 flex items-center justify-between border border-amber-200">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
-                      <Heart className="w-4 h-4 fill-white" />
+                {(historiaMes.perros_cuidados_texto || historiaMes.perros_cuidados_subtexto) && (
+                  <div className="mt-3 bg-amber-50 rounded-xl p-3 flex items-center justify-between border border-amber-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        <Heart className="w-4 h-4 fill-white" />
+                      </div>
+                      <div>
+                        {historiaMes.perros_cuidados_texto && (
+                          <p className="text-xs font-bold text-stone-900">{historiaMes.perros_cuidados_texto}</p>
+                        )}
+                        {historiaMes.perros_cuidados_subtexto && (
+                          <p className="text-[10px] text-stone-500">{historiaMes.perros_cuidados_subtexto}</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-stone-900">{historiaMes.perros_cuidados_texto || '45 Perros bajo nuestro cuidado'}</p>
-                      <p className="text-[10px] text-stone-500">{historiaMes.perros_cuidados_subtexto || 'Alimentados, cuidados y amados a diario'}</p>
-                    </div>
+                    <span className="text-xs font-bold text-amber-700 underline">
+                      Conócelos
+                    </span>
                   </div>
-                  <span className="text-xs font-bold text-amber-700 underline">
-                    Conócelos
-                  </span>
-                </div>
+                )}
               </div>
             </div>
           </div>

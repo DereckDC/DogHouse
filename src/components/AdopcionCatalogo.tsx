@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Dog, 
   Search, 
@@ -6,18 +6,18 @@ import {
   CheckCircle2, 
   XCircle, 
   Heart, 
-  Info,
+  Info, 
   ShieldCheck, 
-  Sparkles,
-  Eye,
-  Maximize2,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-  LayoutGrid,
-  Image as ImageIcon,
-  Camera
+  Sparkles, 
+  Eye, 
+  Maximize2, 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  ArrowUpDown, 
+  LayoutGrid, 
+  Image as ImageIcon, 
+  Camera 
 } from 'lucide-react';
 import { Perro, DogSize } from '../types';
 import { FormularioAdopcion } from './FormularioAdopcion';
@@ -27,6 +27,8 @@ interface AdopcionCatalogoProps {
   dogs?: Perro[];
   loading?: boolean;
   selectedDog?: Perro | null;
+  selectedDogForPreview?: Perro | null;
+  onClearSelectedDogForPreview?: () => void;
   onSelectDog?: (dog: Perro | null) => void;
   onAdoptDog?: (dog: Perro) => void;
   onShowToast: (tipo: 'success' | 'info' | 'error', titulo: string, mensaje: string) => void;
@@ -78,6 +80,8 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
   dogs,
   loading = false,
   selectedDog,
+  selectedDogForPreview,
+  onClearSelectedDogForPreview,
   onSelectDog,
   onAdoptDog,
   onShowToast,
@@ -103,8 +107,15 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
 
   const activeModalDog = selectedDog || internalSelectedDog;
 
-  const handleAdoptAction = (dog: Perro) => {
+  const handleClosePreviewModal = () => {
     setPreviewDogIndex(null);
+    if (onClearSelectedDogForPreview) {
+      onClearSelectedDogForPreview();
+    }
+  };
+
+  const handleAdoptAction = (dog: Perro) => {
+    handleClosePreviewModal();
     setActiveDogPhotoIndex(0);
     if (onAdoptDog) {
       onAdoptDog(dog);
@@ -235,6 +246,30 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
     setOnlyVaccinated(false);
     setSortBy('default');
   };
+
+  // Si el usuario llega desde el inicio habiendo seleccionado un perrito específico,
+  // limpiamos filtros para asegurar visibilidad y abrimos su ficha / tarjeta detallada
+  useEffect(() => {
+    if (selectedDogForPreview) {
+      resetAllFilters();
+    }
+  }, [selectedDogForPreview]);
+
+  useEffect(() => {
+    if (selectedDogForPreview && filteredDogs.length > 0) {
+      const idx = filteredDogs.findIndex((d) => d.id === selectedDogForPreview.id);
+      if (idx >= 0) {
+        setPreviewDogIndex(idx);
+        setActiveDogPhotoIndex(0);
+        setTimeout(() => {
+          const el = document.getElementById(`dog-card-${selectedDogForPreview.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 120);
+      }
+    }
+  }, [selectedDogForPreview, filteredDogs]);
 
   const hasActiveFilters = 
     Boolean(searchTerm) || 
@@ -788,7 +823,7 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
       {previewDog && previewDogIndex !== null && (
         <div 
           className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-fade-in"
-          onClick={() => setPreviewDogIndex(null)}
+          onClick={handleClosePreviewModal}
         >
           <div 
             className="bg-white w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border border-stone-200 flex flex-col md:flex-row max-h-[90vh]"
@@ -896,7 +931,7 @@ export const AdopcionCatalogo: React.FC<AdopcionCatalogoProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => setPreviewDogIndex(null)}
+                    onClick={handleClosePreviewModal}
                     className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
                   >
                     <X className="w-5 h-5" />

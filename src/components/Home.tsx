@@ -91,12 +91,19 @@ export const Home: React.FC<HomeProps> = ({
   const urgentList = allDogs.filter((d) => d.urgente);
   const displayedDogs = urgentList.length > 0 ? urgentList : allDogs;
 
+  const handleDogCardClick = (dog: Perro) => {
+    if (onSelectDog) {
+      onSelectDog(dog);
+    } else {
+      onNavigate('adopcion');
+    }
+  };
+
   const handleAdoptClick = (dog: Perro) => {
     if (onAdoptDog) {
       onAdoptDog(dog);
     } else if (onSelectDog) {
       onSelectDog(dog);
-      onNavigate('adopcion');
     } else {
       onNavigate('adopcion');
     }
@@ -371,7 +378,7 @@ export const Home: React.FC<HomeProps> = ({
               return (
                 <div 
                   key={dog.id}
-                  onClick={() => onNavigate('adopcion')}
+                  onClick={() => handleDogCardClick(dog)}
                   className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group cursor-pointer"
                 >
                   <div className="relative h-60 overflow-hidden bg-stone-100">
@@ -429,11 +436,11 @@ export const Home: React.FC<HomeProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAdoptClick(dog);
+                          handleDogCardClick(dog);
                         }}
                         className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs"
                       >
-                        Ver Galería
+                        Ver Ficha
                       </button>
                     </div>
                   </div>

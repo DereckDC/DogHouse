@@ -88,6 +88,7 @@ export default function App() {
   // Modal de Adopción
   const [selectedDogForAdoption, setSelectedDogForAdoption] = useState<Perro | null>(null);
   const [isAdoptionModalOpen, setIsAdoptionModalOpen] = useState(false);
+  const [selectedDogForPreview, setSelectedDogForPreview] = useState<Perro | null>(null);
 
   // Sincronización de eventos de historial del navegador para /loginadmin y /panel-admin
   useEffect(() => {
@@ -166,6 +167,11 @@ export default function App() {
     setIsAdoptionModalOpen(true);
   };
 
+  const handleSelectDogForPreview = (dog: Perro) => {
+    setSelectedDogForPreview(dog);
+    handleNavigate('adopcion');
+  };
+
   const handleNavigate = (section: string) => {
     setActiveSection(section);
     if (section === 'panel-admin' || section === 'admin') {
@@ -214,6 +220,7 @@ export default function App() {
             loadingHistoria={loadingConfig}
             onNavigate={handleNavigate}
             onAdoptDog={handleOpenAdoptionModal}
+            onSelectDog={handleSelectDogForPreview}
             onRefreshDogs={refreshDogs}
           />
         )}
@@ -222,6 +229,8 @@ export default function App() {
           <AdopcionCatalogo
             dogs={dogs}
             loading={loadingDogs}
+            selectedDogForPreview={selectedDogForPreview}
+            onClearSelectedDogForPreview={() => setSelectedDogForPreview(null)}
             onAdoptDog={handleOpenAdoptionModal}
             onShowToast={showToast}
           />

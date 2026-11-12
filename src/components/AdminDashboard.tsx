@@ -616,6 +616,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleEventPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        onShowToast('error', 'Archivo muy pesado', 'La imagen no debe superar los 8MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        if (result) {
+          setEditingEvent((prev) => prev ? { ...prev, foto_url: result } : null);
+          onShowToast('info', 'Foto de Evento Cargada', 'Foto seleccionada desde tu almacenamiento. Guarda el evento para confirmar.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleDeleteEvent = async (id: string) => {
     if (!confirm('¿Eliminar este evento de la cartelera?')) return;
     try {
@@ -2969,16 +2988,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="font-bold text-stone-700 block mb-1">Foto del Afiche (URL)</label>
-                <input
-                  type="url"
-                  value={editingEvent.foto_url || ''}
-                  onChange={(e) => setEditingEvent({ ...editingEvent, foto_url: e.target.value })}
-                  placeholder="https://..."
-                  required
-                  className="w-full p-2.5 rounded-xl border outline-none"
-                />
+              {/* FOTO / AFICHE DEL EVENTO (Subida desde almacenamiento interno o URL) */}
+              <div className="space-y-2 p-3.5 rounded-2xl bg-stone-50 border border-stone-200">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-stone-900 block text-xs flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-amber-600" />
+                    <span>Afiche o Foto del Evento</span>
+                  </label>
+                  <span className="text-[11px] font-normal text-stone-500">Almacenamiento interno o URL</span>
+                </div>
+
+                {/* Previsualización si existe foto */}
+                {editingEvent.foto_url && (
+                  <div className="relative w-full h-36 rounded-xl overflow-hidden border border-stone-200 bg-stone-900 group">
+                    <img
+                      src={editingEvent.foto_url}
+                      alt="Vista previa del afiche"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-stone-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setEditingEvent({ ...editingEvent, foto_url: '' })}
+                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Quitar foto</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Botón para subir desde almacenamiento interno */}
+                <label className="flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-amber-300 bg-amber-50/60 hover:bg-amber-100/60 text-amber-900 cursor-pointer font-bold transition-all text-xs">
+                  <Upload className="w-4 h-4 text-amber-600" />
+                  <span>Subir afiche desde almacenamiento interno / dispositivo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEventPhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* O pegar enlace directo */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-stone-600 mb-1">
+                    O ingresar enlace web / URL de la imagen:
+                  </label>
+                  <input
+                    type="url"
+                    value={editingEvent.foto_url || ''}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, foto_url: e.target.value })}
+                    placeholder="https://..."
+                    className="w-full p-2.5 rounded-xl border border-stone-300 bg-white text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
               </div>
 
               <div>
